@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr" dir="ltr" data-bs-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Écran de l'agent</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/vendor/leaflet.css"><link rel="stylesheet" href="/vendor/tabler.min.css"><link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/leaflet.js"></script><script src="/vendor/qrcode.js"></script>
+</head>
+<body>
+<div class="dispatch">
+  <aside class="side">
+    <form class="block" id="newForm">
+      <h2>Nouvel appel au 14</h2>
+      <div class="row"><input class="grow form-control" id="phone" inputmode="tel" dir="ltr" placeholder="0555 12 34 56" aria-label="Numéro de l'appelant"><button class="btn btn-danger" type="submit">Nouvel accident</button></div>
+      <p class="muted" id="smsNote" hidden>Envoi de SMS non activé : le lien et le QR code s'affichent à l'écran.</p>
+      <p class="error" id="msg" role="alert"></p>
+    </form>
+    <div id="pending"></div>
+    <h3 class="col-title">Accidents ouverts</h3>
+    <div id="list"></div>
+  </aside>
+  <div class="center">
+    <div id="map" aria-label="Carte des accidents et des unités"></div>
+    <section class="feed" aria-label="Journal des événements"><h3 class="col-title">Journal</h3><ol id="feed"></ol></section>
+  </div>
+  <aside class="side right">
+    <div class="tabs" role="group" aria-label="Panneau">
+      <button type="button" id="tabIncident" aria-pressed="true">Accident</button>
+      <button type="button" id="tabUnits" aria-pressed="false">Unités</button>
+    </div>
+    <div id="detail"></div>
+    <div id="units" hidden></div>
+  </aside>
+</div>
+<script type="module" src="/js/dispatch.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>أرسل موقعك</title>
+<style>
+:root { color-scheme: light; }
+body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #f3f6f6; color: #10252b; font-size: 18px; line-height: 1.6; }
+main { max-width: 460px; margin: auto; padding: 20px 16px; display: grid; gap: 14px; }
+h1 { margin: 0; font-size: 24px; } p { margin: 0; }
+button, label.file { display: block; width: 100%; box-sizing: border-box; border: 0; border-radius: 8px; padding: 18px; font: inherit; font-weight: 600; text-align: center; cursor: pointer; }
+.main { background: #c41f2e; color: #fff; } .second { background: #dfe7e6; color: #10252b; }
+.note { font-size: 14px; color: #4a5f65; } .ok { background: #dff3e6; padding: 12px; border-radius: 8px; } .bad { background: #fbe6e6; padding: 12px; border-radius: 8px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>الحماية المدنية</h1>
+  <div id="closed" class="bad" hidden>انتهت صلاحية هذا الرابط. ابق على الخط مع الرقم 14.</div>
+  <div id="open">
+    <p>نحتاج موقعك لنصل إلى الحادث بسرعة. <b>ابق على الخط مع الرقم 14.</b></p>
+    <p style="height:12px"></p>
+    <button class="main" id="send">أرسل موقعي</button>
+    <p style="height:12px"></p>
+    <p id="status" role="status"></p>
+    <div id="photoBox" hidden>
+      <label class="file second">أضف صورة (اختياري)<input id="photo" type="file" accept="image/*" capture="environment" hidden></label>
+      <p id="photoStatus" role="status"></p>
+    </div>
+  </div>
+  <p class="note">يُستعمل موقعك وصورتك لهذا الحادث فقط، وتُحذف الصور ورقم الهاتف بعد 30 يوماً من إغلاقه.</p>
+</main>
+<script>
+const token = location.pathname.split('/').pop(), $ = id => document.getElementById(id);
+fetch('/api/link/' + token).then(r => r.json()).then(s => { if (!s.valid) { $('open').hidden = true; $('closed').hidden = false; } });
+function post(body) { return fetch('/api/link/' + token + '/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+$('send').onclick = () => {
+  if (!navigator.geolocation) { $('status').textContent = 'هاتفك لا يدعم تحديد الموقع. أعطِ مكانك للعون على الخط.'; return; }
+  $('status').textContent = 'جارٍ تحديد موقعك...';
+  navigator.geolocation.watchPosition(async p => {
+    const r = await post({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy });
+    if (r.ok) { $('status').className = 'ok'; $('status').textContent = 'وصل موقعك إلى العون. ابق على الخط.'; $('send').hidden = true; $('photoBox').hidden = false; }
+    else { $('status').className = 'bad'; $('status').textContent = 'لم يصل موقعك. أعطِ مكانك للعون على الخط.'; }
+  }, () => { $('status').className = 'bad'; $('status').textContent = 'لم نحصل على موقعك. أعطِ مكانك للعون على الخط.'; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+};
+$('photo').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('photoStatus').textContent = 'جارٍ الإرسال...';
+  const r = await fetch('/api/link/' + token + '/photo', { method: 'POST', body: f });
+  $('photoStatus').textContent = r.ok ? 'وصلت الصورة.' : 'لم تصل الصورة. يكفي موقعك.';
+};
+</script>
+</body>
+</html>

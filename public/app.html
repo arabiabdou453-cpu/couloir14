@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#c41f2e">
+<link rel="manifest" href="/app.webmanifest">
+<title>بلاغ حادث</title>
+<style>
+body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #f3f6f6; color: #10252b; font-size: 18px; line-height: 1.6; }
+main { max-width: 460px; margin: auto; padding: 24px 16px; display: grid; gap: 16px; text-align: center; }
+h1 { margin: 0; font-size: 24px; } p { margin: 0; }
+a.call { display: block; background: #c41f2e; color: #fff; border-radius: 50%; width: 220px; height: 220px; line-height: 220px; margin: 12px auto; font-size: 30px; font-weight: 700; text-decoration: none; }
+input { font: inherit; padding: 12px; width: 100%; box-sizing: border-box; border: 1px solid #b3c1bf; border-radius: 8px; direction: ltr; text-align: center; }
+.note { font-size: 14px; color: #4a5f65; }
+</style>
+</head>
+<body>
+<main>
+  <h1>بلاغ حادث مرور</h1>
+  <p>اضغط الزر: يتصل هاتفك بالرقم 14، ويُرسل موقعك إلى العون.</p>
+  <a class="call" id="call" href="tel:14">اتصل بـ 14</a>
+  <p id="status" role="status"></p>
+  <label>رقم هاتفك (اختياري، ليربطه العون بمكالمتك)<input id="phone" inputmode="tel" placeholder="0555 12 34 56"></label>
+  <p class="note">هذا التطبيق لا يرسل إسعافاً وحده: العون يتأكد من البلاغ أولاً. البلاغ الكاذب يعطل إنقاذ غيرك. إذا لم تكن هناك شبكة، فلن تصل المكالمة ولا الموقع.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+try { $('phone').value = localStorage.getItem('phone') || ''; } catch (e) {}
+$('call').addEventListener('click', () => {
+  try { localStorage.setItem('phone', $('phone').value); } catch (e) {}
+  if (!navigator.geolocation) return;
+  $('status').textContent = 'جارٍ إرسال موقعك...';
+  navigator.geolocation.getCurrentPosition(async p => {
+    const r = await fetch('/api/app/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, phone: $('phone').value || null }) });
+    $('status').textContent = r.ok ? 'وصل موقعك إلى العون.' : 'لم يصل موقعك. أعطِ مكانك للعون على الخط.';
+  }, () => { $('status').textContent = 'لم نحصل على موقعك. أعطِ مكانك للعون على الخط.'; }, { enableHighAccuracy: true, timeout: 15000 });
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

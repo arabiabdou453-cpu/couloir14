@@ -1,0 +1,11 @@
+{
+  "name": "بلاغ حادث",
+  "short_name": "بلاغ",
+  "start_url": "/app",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#f3f6f6",
+  "theme_color": "#c41f2e",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

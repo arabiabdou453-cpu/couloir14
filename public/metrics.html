@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr" dir="ltr" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Couloir 14 · Tableau de bord de gestion</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/vendor/tabler.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .kpi-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 4px; position: relative; overflow: hidden; }
+  .kpi-card .kpi-label { font-size: 13px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
+  .kpi-card .kpi-val { font: 500 28px var(--data); color: var(--ink); line-height: 1.2; }
+  .kpi-card .kpi-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+  .kpi-card.highlight { border-color: var(--wait); }
+  .kpi-card.highlight .kpi-val { color: var(--wait); }
+  
+  .stage-bars { display: grid; gap: 12px; margin-top: 10px; }
+  .stage-row { display: grid; grid-template-columns: 200px 1fr 90px; gap: 14px; align-items: center; font-size: 13.5px; }
+  .stage-meter { background: var(--panel-2); height: 18px; border-radius: 4px; overflow: hidden; position: relative; border: 1px solid var(--line); }
+  .stage-fill { height: 100%; background: var(--info); border-radius: 3px; transition: width .3s ease; }
+  .stage-fill.slowest { background: var(--wait); }
+
+  .badge-slowest { background: rgba(240, 165, 43, 0.15); color: var(--wait); border: 1px solid var(--wait); font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
+  
+  .page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .page-header h1 { font-size: 22px; font-weight: 700; color: var(--ink); }
+  .page-header p { font-size: 14px; color: var(--ink-3); margin-top: 2px; }
+
+  @media (max-width: 768px) {
+    .stage-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<main class="page" style="max-width:1200px" id="page">
+  <div class="page-header">
+    <div>
+      <h1>Tableau de bord de gestion & Délais</h1>
+      <p>Analyse des temps d'intervention, identification des goulets d'étranglement et suivi d'activité</p>
+    </div>
+    <div>
+      <span class="pill ok">Données temps réel</span>
+    </div>
+  </div>
+
+  <div id="dashboard-content"></div>
+</main>
+
+<script type="module">
+import { h, api, topbar, minutes, STATUS, severityPill, clock } from '/js/common.js';
+
+document.body.prepend(topbar("Tableau de bord de gestion", [
+  h('a', { href: '/dispatch', class: 'btn btn-sm btn-outline-secondary' }, "Poste opérateur"),
+  h('a', { href: '/twin', class: 'btn btn-sm btn-outline-secondary' }, "Simulation SUMO")
+]));
+
+async function render() {
+  const d = await api('/metrics');
+  const root = document.getElementById('dashboard-content');
+  root.innerHTML = '';
+
+  const summary = d.summary || {};
+  const slowest = d.slowest;
+  const maxAvg = Math.max(...(d.averages.filter(a => a != null)), 1);
+
+  // 1. KPI Grid
+  const kpis = h('div', { class: 'kpi-grid' },
+    h('div', { class: 'kpi-card' },
+      h('div', { class: 'kpi-label' }, 'Accidents enregistrés'),
+      h('div', { class: 'kpi-val' }, String(summary.totalIncidents || d.incidents.length || 0)),
+      h('div', { class: 'kpi-sub' }, `${summary.closedWithArrival || 0} dossiers clos avec transfert`)
+    ),
+    h('div', { class: 'kpi-card' },
+      h('div', { class: 'kpi-label' }, 'Délai moyen total'),
+      h('div', { class: 'kpi-val' }, minutes(summary.avgTotalS)),
+      h('div', { class: 'kpi-sub' }, "De l'appel au 14 jusqu'à l'arrivée aux urgences")
+    ),
+    h('div', { class: `kpi-card ${slowest ? 'highlight' : ''}` },
+      h('div', { class: 'kpi-label' }, 'Goulot le plus lent'),
+      h('div', { class: 'kpi-val', style: 'font-size: 20px;' }, slowest ? slowest.name : '—'),
+      h('div', { class: 'kpi-sub' }, slowest ? `Moyenne : ${minutes(slowest.durationS)}` : 'Aucun délai mesuré')
+    ),
+    h('div', { class: 'kpi-card' },
+      h('div', { class: 'kpi-label' }, 'Objectif Couloir 14'),
+      h('div', { class: 'kpi-val', style: 'color: var(--open);' }, '- 45 s'),
+      h('div', { class: 'kpi-sub' }, 'Gain moyen prouvé sous simulation SUMO')
+    )
+  );
+
+  // 2. Stages Averages Section
+  const stagesCard = h('div', { class: 'card' },
+    h('div', { style: 'display:flex; justify-content:space-between; align-items:center;' },
+      h('h2', {}, "Moyenne chronométrée par étape d'intervention"),
+      slowest ? h('span', { class: 'badge-slowest' }, `Étape la plus lente : ${slowest.name}`) : null
+    ),
+    h('p', { class: 'muted' }, "Chaque jalon est horodaté automatiquement par les actions des intervenants (Agent 14, Équipage, Hôpital)."),
+    h('div', { class: 'stage-bars' }, d.stages.map((s, k) => {
+      const avg = d.averages[k];
+      const isSlow = slowest && slowest.index === k;
+      const pct = avg != null ? Math.round((avg / maxAvg) * 100) : 0;
+      return h('div', { class: 'stage-row' },
+        h('div', { style: 'display:flex; align-items:center; gap:6px;' },
+          h('span', { style: 'font-weight: 500;' }, s),
+          isSlow ? h('span', { class: 'badge-slowest', style: 'font-size:9px;' }, 'Goulot') : null
+        ),
+        h('div', { class: 'stage-meter' },
+          h('div', { class: `stage-fill ${isSlow ? 'slowest' : ''}`, style: `width: ${pct}%` })
+        ),
+        h('div', { class: 'num', style: 'font-weight: 600; text-align: end;' }, minutes(avg))
+      );
+    }))
+  );
+
+  // 3. Incidents Per Day Section
+  const perDay = d.perDay || [];
+  const dailyCard = h('div', { class: 'card' },
+    h('h2', {}, 'Activité journalière'),
+    h('p', { class: 'muted' }, 'Volume d\'accidents et moyenne de prise en charge par jour.'),
+    perDay.length ? h('div', { class: 'table-wrap' },
+      h('table', { class: 'table table-vcenter' },
+        h('thead', {},
+          h('tr', {},
+            h('th', {}, 'Date'),
+            h('th', { class: 'n' }, 'Accidents'),
+            h('th', { class: 'n' }, 'Délai moyen total'),
+            h('th', {}, 'Statut')
+          )
+        ),
+        h('tbody', {}, perDay.map(day => h('tr', {},
+          h('td', { class: 'num', style: 'font-weight: 500;' }, day.day),
+          h('td', { class: 'n' }, h('span', { class: 'badge bg-secondary-subtle text-secondary' }, String(day.count))),
+          h('td', { class: 'n num' }, minutes(day.avgTotalS)),
+          h('td', {}, h('span', { class: 'pill ok' }, 'Enregistré'))
+        )))
+      )
+    ) : h('p', { class: 'muted' }, 'Aucune intervention enregistrée pour le moment.')
+  );
+
+  // 4. Detailed Incidents Table
+  const tableCard = h('div', { class: 'card' },
+    h('h2', {}, 'Registre détaillé des interventions'),
+    d.incidents.length ? h('div', { class: 'table-wrap' },
+      h('table', { class: 'table table-vcenter table-hover' },
+        h('thead', {},
+          h('tr', {},
+            h('th', {}, 'Réf'),
+            h('th', {}, 'Date'),
+            h('th', {}, 'Lieu / Axe'),
+            h('th', {}, 'Gravité'),
+            h('th', {}, 'État'),
+            ...d.stages.map(s => h('th', { class: 'n' }, s)),
+            h('th', { class: 'n', style: 'color: var(--open); font-weight: 700;' }, 'Total')
+          )
+        ),
+        h('tbody', {}, d.incidents.map(r => h('tr', {},
+          h('td', { class: 'num' }, `#${r.id}`),
+          h('td', { class: 'num muted', style: 'font-size:12px;' }, r.created_at ? clock(r.created_at) : '—'),
+          h('td', { style: 'max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' }, r.road_label || 'Non précisé'),
+          h('td', {}, severityPill(r.severity)),
+          h('td', {}, h('span', { class: `badge bg-${r.status === 'closed' ? 'success' : r.status === 'cancelled' ? 'secondary' : 'primary'}-subtle text-${r.status === 'closed' ? 'success' : r.status === 'cancelled' ? 'secondary' : 'primary'}` }, STATUS[r.status] || r.status)),
+          ...r.durations.map(x => h('td', { class: 'n num' }, minutes(x))),
+          h('td', { class: 'n num', style: 'font-weight: 700; color: var(--open);' }, minutes(r.totalS))
+        )))
+      )
+    ) : h('p', { class: 'muted' }, "Pas encore de données. Les délais s'affichent ici après le premier accident.")
+  );
+
+  root.append(kpis, stagesCard, dailyCard, tableCard);
+}
+
+render();
+</script>
+</body>
+</html>
