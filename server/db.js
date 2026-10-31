@@ -66,6 +66,11 @@ function openDb(file, seedDir) {
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  // A faster route is only suggested to the crew; it is kept here until they accept it or it stops being faster.
+  const have = new Set(db.prepare("SELECT name FROM pragma_table_info('missions')").all().map(c => c.name));
+  for (const [col, type] of [['suggested_route_json', 'TEXT'], ['suggested_eta', 'REAL'], ['suggested_at', 'INTEGER']]) {
+    if (!have.has(col)) db.exec(`ALTER TABLE missions ADD COLUMN ${col} ${type}`);
+  }
   if (seedDir && db.prepare('SELECT COUNT(*) AS n FROM hospitals').get().n === 0) seed(db, seedDir);
   return db;
 }

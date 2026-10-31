@@ -178,6 +178,7 @@ function startServer(env = loadEnv()) {
         case 'phone-ack': need(s, 'operator'); return json(res, 200, app.acknowledge(id, 'operator_by_phone'));
         case 'action': need(s, 'crew', 'operator'); crewOwns(s, id); return json(res, 200, await app.crewAction(id, b.action, actorOf(s)));
         case 'position': need(s, 'crew'); crewOwns(s, id); return json(res, 200, app.setPosition(id, b));
+        case 'route': need(s, 'crew'); crewOwns(s, id); return json(res, 200, app.answerRoute(id, b.accept === true, actorOf(s)));
         case 'victims': need(s, 'crew'); crewOwns(s, id); return json(res, 200, app.updateVictims(id, b, actorOf(s)));
         case 'ack': case 'ready':
           need(s, 'hospital');
@@ -216,7 +217,7 @@ function startServer(env = loadEnv()) {
   timers.forEach(t => t.unref());
   return new Promise(resolve => {
     server.listen(+(env.PORT || 8080), () => {
-      console.log(`Green Corridor is running on http://localhost:${server.address().port}`);
+      console.log(`Track Twin is running on http://localhost:${server.address().port}`);
       resolve({ server, app, db, close: () => { timers.forEach(clearInterval); for (const c of clients) c.end(); server.close(); db.close(); } });
     });
   });

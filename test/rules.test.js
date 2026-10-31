@@ -70,6 +70,15 @@ test('a caller token expires and reaches only its own incident', async () => {
   assert.strictEqual(q(b.id), null);
   assert.deepStrictEqual(Object.keys(app.callerStatus(tokenA)).sort(), ['sent', 'valid']);
 
+  const countEvents = id => db.prepare("SELECT COUNT(*) AS c FROM events WHERE incident_id = ? AND action = 'location_set'").get(id).c;
+  assert.strictEqual(countEvents(a.id), 1);
+  // Jitter update from the same caller (under 20m, identical accuracy) does not add a journal event
+  app.callerLocation(tokenA, { lat: 36.75005, lon: 3.06005, accuracy: 10 });
+  assert.strictEqual(countEvents(a.id), 1, 'minor updates from same caller do not spam events journal');
+  // Significant position change (> 20m) logs an event
+  app.callerLocation(tokenA, { lat: 36.751, lon: 3.06, accuracy: 10 });
+  assert.strictEqual(countEvents(a.id), 2, 'significant moves create a location_set event');
+
   assert.throws(() => app.callerLocation('not-a-token', { lat: 1, lon: 1 }), /expiré/);
   advance(R.CONFIG.linkTtlMs + 1);
   assert.throws(() => app.callerLocation(tokenB, { lat: 36.7, lon: 3 }), /expiré/);

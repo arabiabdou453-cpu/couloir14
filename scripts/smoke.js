@@ -14,6 +14,8 @@ const step = t => console.log('ok:', t);
 
 (async () => {
   const op = await session('operator', 0, env.OPERATOR_PIN);
+  // This run creates accidents with a placeholder number, so it must never reach a real SMS account.
+  if ((await op('/state')).json.smsConfigured) { console.error('STOPPED: this server has real SMS turned on. Start it with SMSGATE_USERNAME= and SMSGATE_PASSWORD= to run this check.'); process.exit(1); }
   assert.strictEqual((await anon('/state')).status, 401); step('state needs a login');
   assert.strictEqual((await fetch(`${base}/api/login`, { method: 'POST', body: JSON.stringify({ role: 'operator', pin: 'wrong' }) })).status, 401); step('a wrong code is refused');
 

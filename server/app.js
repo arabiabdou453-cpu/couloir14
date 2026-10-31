@@ -36,7 +36,7 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
 
   async function sendLink(incidentId, phone, actor) {
     const token = createLink(incidentId, phone), url = `${publicUrl()}/l/${token}`;
-    const text = `الحماية المدنية: افتح هذا الرابط لإرسال موقعك إلى العون. ابق على الخط. ${url}`;
+    const text = `Track Twin (نسخة عرض): افتح هذا الرابط لإرسال موقعك إلى العون. ${url}`;
     const result = phone ? await sms.send(phone, text) : { status: 'no_phone' };
     q('UPDATE caller_links SET sms_status = ? WHERE token_hash = ?').run(result.status, R.hashToken(token));
     log(incidentId, actor, 'link_sent', result.status);
@@ -61,9 +61,22 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
 
   function setIncidentLocation(id, loc, actor, source) {
     const i = incident(id);
+    const isFirst = i.lat == null;
+    let shouldLog = isFirst;
+    if (!isFirst) {
+      if (actor !== 'caller') {
+        shouldLog = true;
+      } else {
+        const dist = R.distanceM(i, loc);
+        const accDiff = (i.accuracy_m ?? Infinity) - (loc.accuracy ?? Infinity);
+        if (dist > 20 || accDiff >= 15) {
+          shouldLog = true;
+        }
+      }
+    }
     q('UPDATE incidents SET lat = ?, lon = ?, accuracy_m = ?, located_at = COALESCE(located_at, ?), road_label = COALESCE(?, road_label) WHERE id = ?').run(loc.lat, loc.lon, loc.accuracy ?? null, now(), loc.road_label || null, id);
     if (i.status === 'new') q("UPDATE incidents SET status = 'located' WHERE id = ?").run(id);
-    log(id, actor, 'location_set', source);
+    if (shouldLog) log(id, actor, 'location_set', source);
     notify();
   }
 
@@ -283,11 +296,33 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
       const a = R.along(stored, from);
       remaining = a.totalM > 0 ? m.eta_seconds * Math.max(0, 1 - a.sM / a.totalM) : 0;
     }
-    if (force || !stored || R.shouldSwitchRoute(remaining, fresh.etaS)) {
-      const changed = stored && !force;
-      q('UPDATE missions SET route_json = ?, route_source = ?, eta_seconds = ?, route_checked_at = ?, route_changes = route_changes + ? WHERE id = ?').run(JSON.stringify(fresh.coords), fresh.source, fresh.etaS, now(), changed ? 1 : 0, m.id);
-      if (changed) log(m.incident_id, 'system', 'route_changed');
-    } else q('UPDATE missions SET route_checked_at = ? WHERE id = ?').run(now(), m.id);
+    // Each leg starts on the usual route. After that the platform never changes it alone: a route at least
+    // routeMinGain faster is only offered, and the crew decides (twin: automatic changes lost 6 of 24 sites against 4).
+    if (force || !stored) {
+      q('UPDATE missions SET route_json = ?, route_source = ?, eta_seconds = ?, route_checked_at = ?, suggested_route_json = NULL, suggested_eta = NULL, suggested_at = NULL WHERE id = ?').run(JSON.stringify(fresh.coords), fresh.source, fresh.etaS, now(), m.id);
+    } else if (R.shouldSwitchRoute(remaining, fresh.etaS)) {
+      const had = m.suggested_route_json != null;
+      q('UPDATE missions SET suggested_route_json = ?, suggested_eta = ?, suggested_at = COALESCE(suggested_at, ?), route_checked_at = ? WHERE id = ?').run(JSON.stringify(fresh.coords), fresh.etaS, now(), now(), m.id);
+      if (!had) { log(m.incident_id, 'system', 'route_suggested'); notify(); }
+    } else {
+      q('UPDATE missions SET route_checked_at = ?, suggested_route_json = NULL, suggested_eta = NULL, suggested_at = NULL WHERE id = ?').run(now(), m.id);
+      if (m.suggested_route_json != null) notify();
+    }
+  }
+
+  // The crew accepts the suggested route, or dismisses it. Only then does the route change.
+  function answerRoute(missionId, accept, actor) {
+    const m = mission(missionId);
+    if (!m.suggested_route_json) fail(409, 'Aucun itinéraire proposé');
+    if (accept) {
+      q('UPDATE missions SET route_json = ?, eta_seconds = ?, route_changes = route_changes + 1, suggested_route_json = NULL, suggested_eta = NULL, suggested_at = NULL WHERE id = ?').run(m.suggested_route_json, m.suggested_eta, m.id);
+      log(m.incident_id, actor, 'route_accepted');
+    } else {
+      q('UPDATE missions SET suggested_route_json = NULL, suggested_eta = NULL, suggested_at = NULL WHERE id = ?').run(m.id);
+      log(m.incident_id, actor, 'route_dismissed');
+    }
+    notify();
+    return { ok: true };
   }
 
   async function releaseAll(missionId) {
@@ -402,6 +437,7 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
       id: m.id, incident_id: m.incident_id, status: m.status, simulated: !!m.simulated,
       unit: { id: u.id, name: u.name, lat: pos.lat, lon: pos.lon, ageS: pos.updated_at ? Math.round((now() - pos.updated_at) / 1000) : null },
       hospital: h && { id: h.id, name: h.name, lat: h.lat, lon: h.lon },
+      suggestion: m.suggested_route_json ? { route: JSON.parse(m.suggested_route_json), etaS: Math.round(m.suggested_eta), gainS: etaLeft == null ? null : Math.max(0, Math.round(etaLeft - m.suggested_eta)) } : null,
       route, routeSource: m.route_source, routeChanges: m.route_changes, etaLeftS: etaLeft == null ? null : Math.round(etaLeft),
       ackPending: m.ack_version < m.alert_version, ackAt: m.ack_at, ackBy: m.ack_by, readyAt: m.ready_at,
       ackLate: m.ack_version < m.alert_version && !!m.alert_at && now() - m.alert_at >= CONFIG.ackTimeoutMs,
@@ -535,7 +571,7 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
   const missionGoesTo = (id, hospitalId) => mission(id).hospital_id === hospitalId;
   const loginOptions = () => ({ units: q('SELECT id, name FROM units ORDER BY id').all(), hospitals: q('SELECT id, name FROM hospitals ORDER BY name').all() });
 
-  return { ApiError, createIncident, sendLink, setIncidentLocation, callerStatus, callerLocation, callerPhoto, appReport, confirmReport, rejectReport, mergeIncident, assess, suggest, dispatch, changeHospital, acknowledge, markReady, setHospitalAvailability, crewAction, updateVictims, closeIncident, setPosition, simulateDrive, advanceSimulated, refreshRoute, tick, purgeOld, operatorState, crewState, hospitalState, metrics, lightsForMap, photoAllowed, missionOwnedByUnit, missionGoesTo, loginOptions, mission, q, log };
+  return { ApiError, createIncident, sendLink, setIncidentLocation, callerStatus, callerLocation, callerPhoto, appReport, confirmReport, rejectReport, mergeIncident, assess, suggest, dispatch, changeHospital, acknowledge, markReady, setHospitalAvailability, crewAction, answerRoute, updateVictims, closeIncident, setPosition, simulateDrive, advanceSimulated, refreshRoute, tick, purgeOld, operatorState, crewState, hospitalState, metrics, lightsForMap, photoAllowed, missionOwnedByUnit, missionGoesTo, loginOptions, mission, q, log };
 }
 
 module.exports = { createApp };

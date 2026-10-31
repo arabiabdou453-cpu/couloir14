@@ -80,3 +80,39 @@ test('a light is shown only while its controller accepts', async () => {
   await app.tick();
   assert.deepStrictEqual(open(), [], 'refused later: it stops being shown');
 });
+
+test('a faster route is only suggested, and changes only when the crew accepts', async () => {
+  let eta = 600, line = [[3.06, 36.75], [3.07, 36.76]];
+  const db = openDb(':memory:', seed);
+  const app = createApp({
+    db, lights: loadLights(seed), publicUrl: () => 'https://test', now: () => 1_800_000_000_000,
+    sms: { configured: false, send: async () => ({ status: 'not_configured' }) },
+    routes: { route: async () => ({ coords: line, distanceM: 5000, etaS: eta, source: 'osrm' }) },
+    signals: { request: async () => ({ accepted: true }), release: async () => ({ accepted: true }) },
+  });
+  const { id } = await app.createIncident({}, 'operator');
+  app.setIncidentLocation(id, { lat: 36.76, lon: 3.07 }, 'operator', 'manual');
+  const unit = db.prepare('SELECT id FROM units LIMIT 1').get(), hosp = db.prepare('SELECT id FROM hospitals LIMIT 1').get();
+  db.prepare('INSERT INTO unit_positions (unit_id, lat, lon, updated_at) VALUES (?, ?, ?, ?)').run(unit.id, 36.75, 3.06, 1_800_000_000_000);
+  const { missionId } = await app.dispatch(id, { unitId: unit.id, hospitalId: hosp.id }, 'operator');
+  const usual = db.prepare('SELECT route_json FROM missions WHERE id = ?').get(missionId).route_json;
+
+  eta = 300; line = [[3.06, 36.75], [3.065, 36.7], [3.07, 36.76]];
+  await app.refreshRoute(missionId, false);
+  let m = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId);
+  assert.strictEqual(m.route_json, usual, 'the route did not change by itself');
+  assert.ok(m.suggested_route_json, 'a faster route is offered');
+  assert.strictEqual(m.route_changes, 0);
+
+  await app.answerRoute(missionId, false, 'crew');
+  m = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId);
+  assert.strictEqual(m.route_json, usual, 'dismissed: the crew keeps its route');
+  assert.strictEqual(m.suggested_route_json, null);
+
+  await app.refreshRoute(missionId, false);
+  await app.answerRoute(missionId, true, 'crew');
+  m = db.prepare('SELECT * FROM missions WHERE id = ?').get(missionId);
+  assert.notStrictEqual(m.route_json, usual, 'accepted: the route changes');
+  assert.strictEqual(m.route_changes, 1);
+  assert.throws(() => app.answerRoute(missionId, true, 'crew'), /proposé/);
+});

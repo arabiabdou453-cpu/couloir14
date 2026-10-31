@@ -7,5 +7,4 @@ fs.copyFileSync(from('leaflet', 'dist', 'leaflet.js'), path.join(out, 'leaflet.j
 fs.copyFileSync(from('leaflet', 'dist', 'leaflet.css'), path.join(out, 'leaflet.css'));
 for (const f of fs.readdirSync(from('leaflet', 'dist', 'images'))) fs.copyFileSync(from('leaflet', 'dist', 'images', f), path.join(out, 'images', f));
 fs.copyFileSync(from('qrcode-generator', 'qrcode.js'), path.join(out, 'qrcode.js'));
-fs.copyFileSync(from('@tabler', 'core', 'dist', 'css', 'tabler.min.css'), path.join(out, 'tabler.min.css'));
 console.log('vendor files copied');

@@ -1,134 +1,40 @@
 <!doctype html>
-<html lang="fr" dir="ltr" data-bs-theme="dark">
+<html lang="fr" dir="ltr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Couloir 14 · Connexion Sécurisée</title>
-<link rel="icon" href="/icon.svg">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="/vendor/tabler.min.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion · Track Twin</title>
+<link rel="icon" href="/mark.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600;700&family=Cairo:wght@700&display=swap">
 <link rel="stylesheet" href="/css/app.css">
 </head>
-<body class="login-page">
-<div class="login-card">
-  <div class="login-header">
-    <div class="brand-logo">
-      <svg class="crescent" viewBox="0 0 32 32" aria-hidden="true">
-        <path fill="#e5484d" d="M21 5.5a12 12 0 1 0 0 21 9.6 9.6 0 1 1 0-21Z"/>
-        <path d="M15 16h13m-4-4 4 4-4 4" fill="none" stroke="#2bb673" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <h1>Couloir 14</h1>
-    <p>Portail d'intervention d'urgence & régulation médicale</p>
-  </div>
-
-  <div class="role-selector" role="tablist">
-    <button class="role-btn active" type="button" data-role="operator">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Agent 14</span>
-    </button>
-    <button class="role-btn" type="button" data-role="crew">
-      <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-      <span>Ambulance</span>
-    </button>
-    <button class="role-btn" type="button" data-role="hospital">
-      <svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M12 6v6"/></svg>
-      <span>Urgences</span>
-    </button>
-  </div>
-
-  <form class="login-form" id="form">
-    <input type="hidden" id="role" value="operator">
-
-    <div id="whichBox" hidden>
-      <label id="whichLabel" for="which">Unité</label>
-      <select class="form-select" id="which"></select>
-    </div>
-
-    <div>
-      <label for="pin">Code d'accès sécurisé</label>
-      <input class="form-control" id="pin" type="password" inputmode="numeric" placeholder="••••" autocomplete="current-password" required autofocus>
-    </div>
-
-    <div class="alert alert-danger p-2" id="msgBox" style="display:none; font-size:13px;" role="alert">
-      <span id="msg"></span>
-    </div>
-
-    <button class="btn btn-danger big-btn" type="submit" id="submitBtn">
-      Accéder à la console
-    </button>
-  </form>
-
-  <div class="login-footer-note">
-    Wilaya d'Alger · Protection Civile & Services d'Urgences<br>
-    SolveX 3.0 — Accès réservé aux intervenants opérationnels
-  </div>
-</div>
-
+<body>
+<form class="login card" id="form">
+  <a class="brand" href="/" style="text-decoration:none"><img class="mark" src="/mark.png" alt="" width="30" height="30">Track Twin</a>
+  <h1>Connexion</h1>
+  <label>Je suis<select id="role"><option value="operator">Agent de la Protection civile</option><option value="crew">Équipage d'ambulance</option><option value="hospital">Hôpital</option></select></label>
+  <label id="whichBox" hidden><span id="whichLabel"></span><select id="which"></select></label>
+  <label>Code<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+  <p class="error" id="msg" role="alert"></p>
+  <button class="primary" type="submit">Se connecter</button>
+</form>
 <script type="module">
 import { api } from '/js/common.js';
-
-const $ = id => document.getElementById(id);
-let optionsData = { units: [], hospitals: [] };
-
-try {
-  optionsData = await api('/login-options');
-} catch (e) {
-  console.warn('Options load error:', e);
-}
-
-const roleButtons = document.querySelectorAll('.role-btn');
-const roleInput = $('role');
-
-function updateRole(r) {
-  roleInput.value = r;
-  roleButtons.forEach(b => {
-    b.classList.toggle('active', b.dataset.role === r);
-  });
-
-  const list = r === 'crew' ? optionsData.units : r === 'hospital' ? optionsData.hospitals : null;
+const o = await api('/login-options'), $ = id => document.getElementById(id);
+function fill() {
+  const r = $('role').value, list = r === 'crew' ? o.units : r === 'hospital' ? o.hospitals : null;
   $('whichBox').hidden = !list;
-  if (list) {
-    $('whichLabel').textContent = r === 'crew' ? 'Sélectionner l\'ambulance (MDT)' : 'Sélectionner le service d\'urgence';
-    $('which').replaceChildren(...list.map(x => Object.assign(document.createElement('option'), { value: x.id, textContent: x.name })));
-  }
-  $('pin').focus();
+  if (!list) return;
+  $('whichLabel').textContent = r === 'crew' ? 'Unité' : 'Hôpital';
+  $('which').replaceChildren(...list.map(x => Object.assign(document.createElement('option'), { value: x.id, textContent: x.name })));
 }
-
-roleButtons.forEach(btn => {
-  btn.addEventListener('click', () => updateRole(btn.dataset.role));
-});
-
+$('role').addEventListener('change', fill); fill();
 $('form').addEventListener('submit', async e => {
-  e.preventDefault();
-  $('msgBox').style.display = 'none';
-  $('msg').textContent = '';
-  $('submitBtn').disabled = true;
-  $('submitBtn').textContent = 'Vérification en cours...';
-
+  e.preventDefault(); $('msg').textContent = '';
   try {
-    const payload = {
-      role: roleInput.value,
-      id: +$('which').value || 0,
-      pin: $('pin').value.trim()
-    };
-    const r = await api('/login', payload);
+    const r = await api('/login', { role: $('role').value, id: +$('which').value || 0, pin: $('pin').value });
     location.href = r.role === 'operator' ? '/dispatch' : r.role === 'crew' ? '/unit' : '/er';
-  } catch (x) {
-    $('msgBox').style.display = 'block';
-    $('msg').textContent = x.message || 'Échec de connexion';
-    $('submitBtn').disabled = false;
-    $('submitBtn').textContent = 'Accéder à la console';
-    $('pin').focus();
-  }
+  } catch (x) { $('msg').textContent = x.message; }
 });
-
-// Check if role is passed in URL query e.g. /login?role=crew
-const urlParams = new URLSearchParams(window.location.search);
-const queryRole = urlParams.get('role');
-if (queryRole && ['operator', 'crew', 'hospital'].includes(queryRole)) {
-  updateRole(queryRole);
-}
 </script>
 </body>
 </html>

@@ -1,14 +1,18 @@
 // Civil Protection operator's screen.
-import { h, api, live, severityPill, STATUS, MISSION, topbar, minutes, clock, marker, baseMap, lightColor, lightLabel, lightsNote } from './common.js';
+import { h, api, live, severityPill, STATUS, MISSION, PRIORITY, logo, minutes, clock, marker, baseMap, assessmentFacts, lightColor, lightLabel, lightsNote } from './common.js';
 
 const L = window.L;
-const kpisEl = h('div', { class: 'live-kpi-group' }), freshEl = h('span', { class: 'fresh', role: 'status', style: 'font-size:12px; color:var(--ink-3); margin-inline-start:8px;' });
-const mainEl = document.querySelector('.app-main') || document.body;
-mainEl.prepend(topbar("Régulation CAD 14", [kpisEl, freshEl]));
-const PRIORITY = { critical: 1, high: 2, medium: 3, low: 4 };
+const kpisEl = document.getElementById('kpis'), freshEl = h('span', { class: 'fresh', role: 'status' });
+document.getElementById('rail').append(
+  h('div', { class: 'brand' }, logo(), h('a', { href: '/' }, 'Track Twin')),
+  h('a', { href: '/dispatch', class: 'item on', 'aria-current': 'page' }, 'Régulation'),
+  h('a', { href: '/metrics', class: 'item' }, 'Délais'),
+  h('a', { href: '/twin', class: 'item' }, 'Simulation'),
+  freshEl,
+  h('button', { type: 'button', class: 'logout', onclick: async () => { await api('/logout', {}); location.href = '/login'; } }, 'Déconnexion'));
 const priorityOf = i => PRIORITY[i.severity] || 9;
 const refOf = i => `ALG-${new Date(i.created_at).toISOString().slice(0, 10).replaceAll('-', '')}-${String(i.id).padStart(4, '0')}`;
-const EVENT = { incident_created: 'Accident créé', link_sent: 'Lien envoyé au témoin', location_set: 'Lieu reçu', photo_added: 'Photo reçue', app_report: "Signalement depuis l'application", app_report_rejected: 'Signalement rejeté', merged_into: 'Accidents fusionnés', assessed: 'Gravité évaluée', dispatched: 'Unité envoyée', alert_raised: 'Hôpital alerté', hospital_changed: 'Hôpital changé', hospital_ack: 'Hôpital : alerte reçue', hospital_ready: 'Hôpital : équipe prête', hospital_availability: 'Disponibilité hôpital modifiée', closed: 'Accident clôturé', cancelled: 'Accident annulé', route_changed: 'Itinéraire changé', simulation_started: 'Trajet simulé lancé', ack_escalated: 'Hôpital relancé par SMS', light_refused: 'Feu : commande refusée', crew_accept: 'Équipage : mission acceptée', crew_arrive_scene: 'Équipage : sur les lieux', crew_leave_scene: "Équipage : départ vers l'hôpital", crew_arrive_hospital: "Équipage : arrivé à l'hôpital", victims_updated: 'Nombre de victimes modifié' };
+const EVENT = { incident_created: 'Accident créé', link_sent: 'Lien envoyé au témoin', location_set: 'Lieu reçu', photo_added: 'Photo reçue', app_report: "Signalement depuis l'application", app_report_rejected: 'Signalement rejeté', merged_into: 'Accidents fusionnés', assessed: 'Gravité évaluée', dispatched: 'Unité envoyée', alert_raised: 'Hôpital alerté', hospital_changed: 'Hôpital changé', hospital_ack: 'Hôpital : alerte reçue', hospital_ready: 'Hôpital : équipe prête', hospital_availability: 'Disponibilité hôpital modifiée', closed: 'Accident clôturé', cancelled: 'Accident annulé', route_changed: 'Itinéraire changé', route_suggested: 'Itinéraire plus rapide proposé à l\'équipage', route_accepted: 'Équipage : nouvel itinéraire accepté', route_dismissed: 'Équipage : itinéraire gardé', simulation_started: 'Trajet simulé lancé', ack_escalated: 'Hôpital relancé par SMS', light_refused: 'Feu : commande refusée', crew_accept: 'Équipage : mission acceptée', crew_arrive_scene: 'Équipage : sur les lieux', crew_leave_scene: "Équipage : départ vers l'hôpital", crew_arrive_hospital: "Équipage : arrivé à l'hôpital", victims_updated: 'Nombre de victimes modifié' };
 const map = baseMap(L, 'map');
 const layer = L.layerGroup().addTo(map);
 const listEl = document.getElementById('list'), detailEl = document.getElementById('detail'), pendingEl = document.getElementById('pending'), msgEl = document.getElementById('msg');
@@ -42,12 +46,12 @@ function drawMap() {
   for (const u of state.units) marker(L, 'unit', u.lat, u.lon, u.name).addTo(layer);
   for (const r of state.pending) marker(L, 'report', r.lat, r.lon, `Signalement ${r.id} depuis l'application`).addTo(layer);
   for (const i of state.incidents) {
-    if (i.lat != null) marker(L, 'accident', i.lat, i.lon, `Accident ${i.id}`).on('click', () => { selected = i.id; drawAll(); }).addTo(layer);
+    if (i.lat != null) marker(L, 'accident', i.lat, i.lon, `Accident ${i.id}`).on('click', () => { selected = i.id; showTab('incident'); drawAll(true); }).addTo(layer);
     for (const m of i.missions) {
-      if (m.route) L.polyline(m.route.map(c => [c[1], c[0]]), { color: '#4a9bd9', weight: 5, opacity: .8 }).addTo(layer);
+      if (m.route) L.polyline(m.route.map(c => [c[1], c[0]]), { color: '#14161a', weight: 5, opacity: .9 }).addTo(layer);
       marker(L, 'ambulance', m.unit.lat, m.unit.lon, m.unit.name).addTo(layer);
       if (m.hospital) marker(L, 'hospital', m.hospital.lat, m.hospital.lon, m.hospital.name).addTo(layer);
-      for (const p of m.priority) L.circleMarker([p.lat, p.lon], { radius: 9, color: lightColor(p.status), weight: 3, fillOpacity: .5 }).bindTooltip(lightLabel(p)).addTo(layer);
+      for (const p of m.priority) L.circleMarker([p.lat, p.lon], { radius: 9, color: lightColor(p.status), weight: 3, fillOpacity: .6 }).bindTooltip(lightLabel(p)).addTo(layer);
     }
   }
 }
@@ -56,8 +60,8 @@ function drawList() {
   const ordered = [...state.incidents].sort((a, b) => priorityOf(a) - priorityOf(b) || b.id - a.id);
   listEl.replaceChildren(...ordered.map(i => h('button', { type: 'button', class: `incident ${i.id === selected ? 'current' : ''}`, onclick: () => { selected = i.id; showTab('incident'); drawAll(true); } },
     h('div', { class: 'row' }, h('span', { class: `prio p${priorityOf(i)}` }, i.severity ? `P${priorityOf(i)}` : 'P?'), h('b', {}, `Accident ${i.id}`), !i.missions.length && h('span', { class: 'pill warn' }, 'Sans unité')),
-    h('span', { class: 'ref' }, refOf(i)),
-    h('span', { class: 'muted' }, `${STATUS[i.status]} • `, i.road_label || (i.lat != null ? 'Lieu placé sur la carte' : 'Lieu pas encore connu'), i.duplicateOf ? ` • peut-être le même que l'accident ${i.duplicateOf}` : ''))));
+    h('span', {}, i.road_label || (i.lat != null ? 'Lieu placé sur la carte' : 'Lieu pas encore connu')),
+    h('span', { class: 'muted' }, STATUS[i.status], i.duplicateOf ? ` • peut-être le même que l'accident ${i.duplicateOf}` : ''))));
   if (!state.incidents.length) listEl.replaceChildren(h('p', { class: 'muted', style: 'padding:12px 14px' }, 'Aucun accident ouvert. Créez-en un quand un appel arrive au 14.'));
 }
 
@@ -68,7 +72,7 @@ function drawPending() {
     h('div', { class: 'row' },
       h('button', { type: 'button', onclick: act(async () => { const x = await api(`/reports/${r.id}/confirm`, {}); selected = x.incidentId; }) }, 'Confirmer comme nouvel accident'),
       r.nearIncident && h('button', { type: 'button', onclick: act(() => api(`/reports/${r.id}/confirm`, { intoId: r.nearIncident })) }, `Rattacher à ${r.nearIncident}`),
-      h('button', { type: 'button', onclick: act(() => api(`/reports/${r.id}/reject`, {})) }, 'Rejeter')))));
+      h('button', { type: 'button', class: 'line', onclick: act(() => api(`/reports/${r.id}/reject`, {})) }, 'Rejeter')))));
 }
 
 const draftOf = i => (drafts[i.id] = drafts[i.id] || (i.assessment
@@ -91,7 +95,7 @@ function dispatchBox(i) {
   const s = suggestions[i.id];
   if (!s) return h('div', { class: 'block' }, h('button', { type: 'button', disabled: i.lat == null, onclick: act(async () => { suggestions[i.id] = await api(`/incidents/${i.id}/suggest`, {}); drawAll(true); }) }, i.missions.length ? 'Proposer une unité de plus' : 'Proposer une unité et un hôpital'), i.lat == null && h('span', { class: 'muted' }, "Indiquez d'abord le lieu"));
   const pick = s.pick = s.pick || { unitId: s.units[0] && s.units[0].id, hospitalId: s.hospitals[0] && s.hospitals[0].id };
-  const choice = (item, key) => h('button', { type: 'button', class: `choice ${pick[key] === item.id ? 'selected' : ''}`, onclick: () => { pick[key] = item.id; drawAll(true); } },
+  const choice = (item, key) => h('button', { type: 'button', class: `choice ${pick[key] === item.id ? 'selected' : ''}`, 'aria-pressed': pick[key] === item.id ? 'true' : 'false', onclick: () => { pick[key] = item.id; drawAll(true); } },
     h('b', {}, item.name), h('span', { class: 'muted' }, `${item.etaMin} min • ${item.km} km • ${item.reason}`));
   return h('div', { class: 'block' },
     h('h3', {}, 'Unité'), s.units.map(u => choice(u, 'unitId')),
@@ -103,11 +107,11 @@ function dispatchBox(i) {
 function missionBox(i, m) {
   const hospitals = state.hospitals.filter(x => x.available);
   return h('div', { class: 'block' },
-    h('div', { class: 'row' }, h('b', {}, m.unit.name), h('span', { class: 'pill' }, MISSION[m.status] || m.status)),
-    h('div', { class: 'row' }, h('span', { class: 'muted' }, `Durée estimée : ${minutes(m.etaLeftS)}`), m.routeSource === 'straight' && h('span', { class: 'pill warn' }, "Estimation à vol d'oiseau"), m.routeSource === 'osrm' && h('span', { class: 'muted' }, 'Sans le trafic en direct')),
+    h('div', { class: 'row', style: 'justify-content:space-between' }, h('h2', {}, m.unit.name), h('span', { class: 'bigtime' }, minutes(m.etaLeftS))),
+    h('span', { class: 'muted' }, MISSION[m.status] || m.status, m.routeSource === 'straight' ? " · estimation à vol d'oiseau" : ' · sans le trafic en direct'),
     h('div', { class: 'row' }, m.unit.ageS == null ? h('span', { class: 'pill warn' }, "Position de l'équipage pas encore reçue") : m.unit.ageS > state.staleAfterS ? h('span', { class: 'pill bad' }, `Dernière position il y a ${minutes(m.unit.ageS)} : contactez par radio`) : h('span', { class: 'pill ok' }, "Position de l'équipage en direct"), m.simulated && h('span', { class: 'pill warn' }, 'Trajet simulé')),
-    h('div', { class: 'row' }, h('span', { class: `pill ${m.ackLate ? 'bad' : m.ackPending ? 'warn' : 'ok'}` }, `${m.hospital ? m.hospital.name : ''} : ${m.ackLate ? 'pas de confirmation, appelez' : m.ackPending ? 'en attente de confirmation' : m.readyAt ? 'prêt' : 'alerte reçue'}`),
-      m.ackPending && h('button', { type: 'button', onclick: act(() => api(`/missions/${m.id}/phone-ack`, {})) }, 'Confirmé par téléphone')),
+    h('div', { class: m.ackPending || m.ackLate ? 'warnbox' : 'pill ok' }, `${m.hospital ? m.hospital.name : ''} : ${m.ackLate ? 'pas de confirmation, appelez' : m.ackPending ? 'alerte envoyée, en attente de confirmation' : m.readyAt ? 'équipe prête' : 'alerte reçue'}`),
+    m.ackPending && h('button', { type: 'button', onclick: act(() => api(`/missions/${m.id}/phone-ack`, {})) }, 'Confirmé par téléphone'),
     m.priority.length > 0 && h('span', { class: 'pill warn' }, lightsNote(m.priority)),
     h('label', { class: 'muted' }, "Changer d'hôpital", h('select', { onchange: act(e => { if (e.target.value) return api(`/missions/${m.id}/hospital`, { hospitalId: +e.target.value }); }) },
       h('option', { value: '' }, 'Choisir un autre hôpital'), hospitals.filter(x => !m.hospital || x.id !== m.hospital.id).map(x => h('option', { value: x.id }, x.name)))),
@@ -119,14 +123,16 @@ function missionBox(i, m) {
       m.status === 'to_hospital' && h('button', { type: 'button', onclick: act(() => api(`/missions/${m.id}/action`, { action: 'arrive_hospital' })) }, "Arrivée à l'hôpital (pour l'équipage)")));
 }
 
+// "Sent" only means SMS Gateway accepted the message: the phone may send it minutes later.
+const smsLabel = last => (last.used_at ? 'Le témoin a ouvert le lien' : last.sms_status === 'sent' ? 'SMS transmis à la passerelle' : 'SMS non envoyé');
+
 function linkBox(i) {
   const link = links[i.id], last = i.links[0];
   const send = act(async () => { links[i.id] = await api(`/incidents/${i.id}/link`, {}); drawAll(true); });
-  const box = link && link.smsStatus !== 'sent' ? h('div', { class: 'linkbox' }, h('b', {}, 'SMS non envoyé : dictez le lien ou scannez le code'), qr(link.url), h('span', { dir: 'ltr' }, link.url)) : null;
   return h('div', { class: 'block' },
-    h('div', { class: 'row' }, h('h3', {}, 'Lien de localisation'),
-      last && h('span', { class: `pill ${last.used_at ? 'ok' : 'warn'}` }, last.used_at ? 'Le témoin a ouvert le lien' : last.sms_status === 'sent' ? 'SMS envoyé' : 'SMS non envoyé')),
-    h('div', { class: 'row' }, h('button', { type: 'button', onclick: send }, last ? 'Renvoyer le lien' : 'Envoyer le lien')), box);
+    h('div', { class: 'row' }, h('h3', {}, 'Lien de localisation'), last && h('span', { class: `pill ${last.used_at ? 'ok' : 'warn'}` }, smsLabel(last))),
+    h('button', { type: 'button', onclick: send }, last ? 'Renvoyer le lien' : 'Envoyer le lien'),
+    link && !last?.used_at && h('div', { class: 'linkbox' }, h('b', {}, link.smsStatus === 'sent' ? "Si le SMS tarde : dictez le lien ou scannez le code" : 'SMS non envoyé : dictez le lien ou scannez le code'), qr(link.url), h('span', { dir: 'ltr' }, link.url)));
 }
 
 function qr(url) {
@@ -138,32 +144,23 @@ function detail(i) {
   if (!i) return h('p', { class: 'muted', style: 'padding:14px' }, 'Choisissez un accident dans la liste.');
   return [
     h('div', { class: 'block' },
+      h('span', { class: 'ref' }, refOf(i)),
+      h('h1', {}, `Accident ${i.id}`, i.road_label ? ` · ${i.road_label}` : ''),
+      h('div', { class: 'row' }, severityPill(i.severity), h('span', { class: 'pill' }, STATUS[i.status])),
       i.phone && h('span', { class: 'num muted' }, i.phone), i.lat != null && h('span', { class: 'muted' }, `Précision : ${i.accuracy_m ? Math.round(i.accuracy_m) + ' m' : "placé par l'agent"}`),
       i.reports.filter(r => r.photo_path).map(r => h('a', { href: `/api/photos/${r.photo_path}`, target: '_blank' }, 'Photo du témoin')),
-      i.duplicateOf && h('div', { class: 'row' }, h('span', { class: 'pill warn' }, `Peut-être le même que l'accident ${i.duplicateOf}`), h('button', { type: 'button', onclick: act(async () => { await api(`/incidents/${i.id}/merge`, { intoId: i.duplicateOf }); selected = i.duplicateOf; }) }, 'Fusionner'))),
+      i.duplicateOf && h('div', { class: 'row' }, h('span', { class: 'pill warn' }, `Peut-être le même que l'accident ${i.duplicateOf}`), h('button', { type: 'button', onclick: act(async () => { await api(`/incidents/${i.id}/merge`, { intoId: i.duplicateOf }); selected = i.duplicateOf; }) }, 'Fusionner')),
+      i.assessment && h('div', { class: 'facts' }, assessmentFacts(i.assessment))),
     !i.missions.length && linkBox(i),
-    !i.missions.length && h('div', { class: 'block' }, h('h3', {}, 'Placer le lieu à la main'), h('input', { id: 'road', placeholder: 'Route et kilomètre, ou repère le plus proche' }),
+    !i.missions.length && h('div', { class: 'block' }, h('h3', {}, 'Placer le lieu à la main'), h('input', { id: 'road', 'aria-label': 'Route ou repère', placeholder: 'Route et kilomètre, ou repère le plus proche' }),
       h('button', { type: 'button', onclick: () => { pickFor = i.id; map.getContainer().style.cursor = 'crosshair'; say("Cliquez sur le lieu de l'accident sur la carte"); } }, 'Placer sur la carte')),
     i.missions.map(m => missionBox(i, m)),
     questionForm(i),
     dispatchBox(i),
     h('div', { class: 'block' }, h('div', { class: 'row' },
-      h('button', { type: 'button', onclick: act(async () => { await api(`/incidents/${i.id}/close`, {}); selected = null; }) }, "Clôturer l'accident"),
-      h('button', { type: 'button', onclick: act(async () => { await api(`/incidents/${i.id}/cancel`, {}); selected = null; }) }, 'Annuler'))),
+      h('button', { type: 'button', class: 'line', onclick: act(async () => { await api(`/incidents/${i.id}/close`, {}); selected = null; }) }, "Clôturer l'accident"),
+      h('button', { type: 'button', class: 'line', onclick: act(async () => { await api(`/incidents/${i.id}/cancel`, {}); selected = null; }) }, 'Annuler'))),
   ];
-}
-
-// The map moves to an incident when it is chosen or first located, and is left alone otherwise.
-let framed = '';
-function frame() {
-  const i = state.incidents.find(x => x.id === selected);
-  if (!i || i.lat == null) return;
-  const key = `${i.id}:${i.missions.map(m => m.status).join()}`;
-  if (key === framed) return;
-  framed = key;
-  const pts = [[i.lat, i.lon]];
-  for (const m of i.missions) { pts.push([m.unit.lat, m.unit.lon]); if (m.hospital) pts.push([m.hospital.lat, m.hospital.lon]); for (const c of m.route || []) pts.push([c[1], c[0]]); }
-  if (pts.length > 1) map.fitBounds(pts, { padding: [50, 50], maxZoom: 16 }); else map.setView(pts[0], 15);
 }
 
 function showTab(tab) {
@@ -178,33 +175,13 @@ document.getElementById('tabUnits').addEventListener('click', () => showTab('uni
 function drawKpis() {
   const busy = new Set(state.incidents.flatMap(i => i.missions.map(m => m.unit.id)));
   const waiting = state.incidents.flatMap(i => i.missions).filter(m => m.ackPending).length;
+  const noUnit = state.incidents.filter(i => !i.missions.length).length + state.pending.length;
+  const kpi = (value, label, cls) => h('div', { class: cls || null }, h('b', {}, String(value)), ' ', h('span', {}, label));
   kpisEl.replaceChildren(
-    h('div', { class: 'live-kpi' },
-      h('span', { class: 'live-dot bad' }),
-      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Accidents :'),
-      h('b', {}, String(state.incidents.length))
-    ),
-    h('div', { class: 'live-kpi' },
-      h('span', { class: 'live-dot warn' }),
-      h('span', { class: 'muted', style: 'font-size:12px;' }, 'À traiter :'),
-      h('b', {}, String(state.incidents.filter(i => !i.missions.length).length + state.pending.length))
-    ),
-    h('div', { class: 'live-kpi' },
-      h('span', { class: 'live-dot' }),
-      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Unités libres :'),
-      h('b', {}, String(state.units.length - busy.size))
-    ),
-    h('div', { class: 'live-kpi' },
-      h('span', { class: 'live-dot' }),
-      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Hôpitaux dispo :'),
-      h('b', {}, String(state.hospitals.filter(x => x.available).length))
-    ),
-    waiting > 0 ? h('div', { class: 'live-kpi', style: 'border-color: var(--urgent); color: var(--urgent);' },
-      h('span', { class: 'live-dot bad' }),
-      h('span', { style: 'font-size:12px;' }, 'Sans réponse :'),
-      h('b', {}, String(waiting))
-    ) : null
-  );
+    kpi(state.incidents.length, 'accidents ouverts'),
+    kpi(noUnit, 'à traiter', noUnit ? 'bad' : ''),
+    kpi(state.units.length - busy.size, 'unités libres'),
+    kpi(waiting, 'alertes sans réponse', waiting ? 'wait' : ''));
 }
 
 function drawUnits() {
@@ -218,7 +195,20 @@ function drawUnits() {
 
 function drawFeed() {
   document.getElementById('feed').replaceChildren(...state.events.map(e => h('li', {},
-    h('time', {}, clock(e.at)), h('span', { class: 'ref' }, e.incident_id ? `Accident ${e.incident_id}` : '—'), h('span', {}, EVENT[e.action] || e.action))));
+    h('time', {}, clock(e.at)), h('span', { class: 'who' }, e.incident_id ? `Accident ${e.incident_id}` : '—'), h('span', {}, EVENT[e.action] || e.action))));
+}
+
+// The map moves to an incident when it is chosen or first located, and is left alone otherwise.
+let framed = '';
+function frame() {
+  const i = state.incidents.find(x => x.id === selected);
+  if (!i || i.lat == null) return;
+  const key = `${i.id}:${i.missions.map(m => m.status).join()}`;
+  if (key === framed) return;
+  framed = key;
+  const pts = [[i.lat, i.lon]];
+  for (const m of i.missions) { pts.push([m.unit.lat, m.unit.lon]); if (m.hospital) pts.push([m.hospital.lat, m.hospital.lon]); for (const c of m.route || []) pts.push([c[1], c[0]]); }
+  if (pts.length > 1) map.fitBounds(pts, { padding: [50, 50], maxZoom: 16 }); else map.setView(pts[0], 15);
 }
 
 function drawAll(force) {
@@ -236,7 +226,7 @@ live(s => {
   state = s;
   updatedAt = Date.now();
   if (selected && !s.incidents.some(i => i.id === selected)) selected = null;
-  if (!selected && s.incidents.length) selected = s.incidents[0].id;
+  if (!selected && s.incidents.length) selected = [...s.incidents].sort((a, b) => priorityOf(a) - priorityOf(b) || b.id - a.id)[0].id;
   document.getElementById('smsNote').hidden = s.smsConfigured;
   drawAll();
 });
