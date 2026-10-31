@@ -59,9 +59,21 @@ export const clock = t => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-dig
 
 export function topbar(title, extra = []) {
   return h('header', { class: 'topbar' },
-    h('div', { class: 'brand' }, crescent(), h('a', { href: '/', class: 'product' }, 'Couloir 14'), h('span', { class: 'screen' }, title)),
-    extra, h('div', { class: 'spacer' }),
-    h('button', { type: 'button', class: 'btn btn-sm btn-outline-danger', onclick: async () => { await api('/logout', {}); location.href = '/login'; } }, 'Déconnexion'));
+    h('div', { class: 'brand' },
+      crescent(),
+      h('div', { class: 'brand-text' },
+        h('a', { href: '/', class: 'product', style: 'color:#fff;' }, 'Couloir 14'),
+        h('small', {}, 'Protection Civile 14 • Alger')
+      ),
+      h('span', { class: 'pill', style: 'margin-inline-start: 10px; font-weight:700;' }, title)
+    ),
+    extra,
+    h('div', { class: 'spacer' }),
+    h('div', { style: 'display:flex; align-items:center; gap:10px;' },
+      h('span', { class: 'pill', style: 'font-size:12px; border-color:var(--line);' }, '👤 Cpt. Amine M.'),
+      h('button', { type: 'button', class: 'btn btn-outline-danger', style: 'padding: 6px 14px; font-size:13px;', onclick: async () => { await api('/logout', {}); location.href = '/login'; } }, 'Déconnexion')
+    )
+  );
 }
 
 export const assessmentFacts = a => (a ? [
