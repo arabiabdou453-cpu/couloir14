@@ -1,17 +1,10 @@
-# couloir14
+# Track Twin mobile
 
-A new Flutter project.
+Flutter app for the ambulance crew and for citizen reports. It talks to the Track Twin server (see the main README) through the same HTTP routes as the web screens.
 
-## Getting Started
+```bash
+flutter pub get
+flutter run
+```
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Set the server address in the app. Phone GPS needs the server to be reachable over HTTPS.
