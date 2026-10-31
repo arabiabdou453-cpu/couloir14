@@ -25,7 +25,7 @@
 
   .badge-slowest { background: rgba(240, 165, 43, 0.15); color: var(--wait); border: 1px solid var(--wait); font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
   
-  .page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .page-header { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
   .page-header h1 { font-size: 22px; font-weight: 700; color: var(--ink); }
   .page-header p { font-size: 14px; color: var(--ink-3); margin-top: 2px; }
 
@@ -40,9 +40,6 @@
     <div>
       <h1>Tableau de bord de gestion & Délais</h1>
       <p>Analyse des temps d'intervention, identification des goulets d'étranglement et suivi d'activité</p>
-    </div>
-    <div>
-      <span class="pill ok">Données temps réel</span>
     </div>
   </div>
 
@@ -84,9 +81,9 @@ async function render() {
       h('div', { class: 'kpi-sub' }, slowest ? `Moyenne : ${minutes(slowest.durationS)}` : 'Aucun délai mesuré')
     ),
     h('div', { class: 'kpi-card' },
-      h('div', { class: 'kpi-label' }, 'Objectif Couloir 14'),
-      h('div', { class: 'kpi-val', style: 'color: var(--open);' }, '- 45 s'),
-      h('div', { class: 'kpi-sub' }, 'Gain moyen prouvé sous simulation SUMO')
+      h('div', { class: 'kpi-label' }, 'Gain en simulation'),
+      h('div', { class: 'kpi-val', style: 'color: var(--open);' }, '45,5 s'),
+      h('div', { class: 'kpi-sub' }, 'Moyenne SUMO sur 24 lieux, pas une mesure sur le terrain')
     )
   );
 
@@ -125,15 +122,13 @@ async function render() {
           h('tr', {},
             h('th', {}, 'Date'),
             h('th', { class: 'n' }, 'Accidents'),
-            h('th', { class: 'n' }, 'Délai moyen total'),
-            h('th', {}, 'Statut')
+            h('th', { class: 'n' }, 'Délai moyen total')
           )
         ),
         h('tbody', {}, perDay.map(day => h('tr', {},
           h('td', { class: 'num', style: 'font-weight: 500;' }, day.day),
           h('td', { class: 'n' }, h('span', { class: 'badge bg-secondary-subtle text-secondary' }, String(day.count))),
-          h('td', { class: 'n num' }, minutes(day.avgTotalS)),
-          h('td', {}, h('span', { class: 'pill ok' }, 'Enregistré'))
+          h('td', { class: 'n num' }, minutes(day.avgTotalS))
         )))
       )
     ) : h('p', { class: 'muted' }, 'Aucune intervention enregistrée pour le moment.')
