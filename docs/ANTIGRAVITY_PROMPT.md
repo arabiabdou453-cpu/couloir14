@@ -4,7 +4,7 @@ Copy everything below into the tool.
 
 ---
 
-You are continuing **Couloir 14**, a student project for the SolveX 3.0 hackathon (Problem 1: road accidents and emergency response, Algiers). The jury scores simplicity, feasibility and innovation, and will read the code. Explain simply, in Arabic, to the project owner. All staff screens are in French.
+You are continuing **Track Twin**, a student project for the SolveX 3.0 hackathon (Problem 1: road accidents and emergency response, Algiers). The jury scores simplicity, feasibility and innovation, and will read the code. Explain simply, in Arabic, to the project owner. All staff screens are in French.
 
 ## Rules
 
@@ -85,7 +85,7 @@ Not tested: real SMS (needs SMS Gateway credentials), real phone GPS (needs HTTP
 1. Improve the look of the dashboards using Tabler's own components and layouts. Keep the behaviour and run the tests after each change.
 2. Build a manager dashboard from `/metrics`: averages per stage, incidents per day, slowest stage.
 3. Add official accident statistics with their sources and the team section on `/` (see the TODO comment in `public/index.html`).
-4. Bring `/twin` into the Couloir 14 identity.
+4. Bring `/twin` into the Track Twin identity.
 5. Deploy on a Node host with a persistent disk, set `PUBLIC_URL`, test on a real phone.
 6. Prepare the demo: start from an empty database, one critical incident, with all three screens open.
 

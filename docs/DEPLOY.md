@@ -1,4 +1,4 @@
-# Hosting Couloir 14
+# Hosting Track Twin
 
 The site and the server are one Node program, so one host runs both. It needs:
 - Node 24 or newer (the Dockerfile provides it).
