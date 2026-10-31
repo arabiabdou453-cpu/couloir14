@@ -35,24 +35,56 @@
 </style>
 </head>
 <body>
-<main class="page" style="max-width:1200px" id="page">
-  <div class="page-header">
-    <div>
-      <h1>Tableau de bord de gestion & Délais</h1>
-      <p>Analyse des temps d'intervention, identification des goulets d'étranglement et suivi d'activité</p>
+<div class="app-shell">
+  <aside class="app-rail">
+    <a class="rail-brand" href="/" title="Couloir 14">
+      <svg class="crescent" viewBox="0 0 32 32"><path fill="#e5484d" d="M21 5.5a12 12 0 1 0 0 21 9.6 9.6 0 1 1 0-21Z"/><path d="M15 16h13m-4-4 4 4-4 4" fill="none" stroke="#2bb673" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <nav class="rail-nav">
+      <a class="rail-item" href="/dispatch" title="Régulation CAD 14">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </a>
+      <a class="rail-item" href="/unit" title="Équipage Ambulance">
+        <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      </a>
+      <a class="rail-item" href="/er" title="Urgences Hôpital">
+        <svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M12 6v6"/></svg>
+      </a>
+      <a class="rail-item active" href="/metrics" title="Délais & Performance">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 16l4-4 4 4 5-6"/></svg>
+      </a>
+      <a class="rail-item" href="/twin" title="Jumeau SUMO">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
+      </a>
+    </nav>
+    <div class="rail-foot">
+      <a class="rail-item" href="/" title="Présentation publique" target="_blank">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <div style="flex:1; overflow-y:auto; padding:20px 24px;">
+      <main class="page" style="max-width:1200px; margin:0 auto;" id="page">
+        <div class="page-header">
+          <div>
+            <h1>Tableau de bord de gestion & Délais</h1>
+            <p>Analyse des temps d'intervention, identification des goulets d'étranglement et suivi d'activité</p>
+          </div>
+        </div>
+
+        <div id="dashboard-content"></div>
+      </main>
     </div>
   </div>
-
-  <div id="dashboard-content"></div>
-</main>
+</div>
 
 <script type="module">
 import { h, api, topbar, minutes, STATUS, severityPill, clock } from '/js/common.js';
 
-document.body.prepend(topbar("Tableau de bord de gestion", [
-  h('a', { href: '/dispatch', class: 'btn btn-sm btn-outline-secondary' }, "Poste opérateur"),
-  h('a', { href: '/twin', class: 'btn btn-sm btn-outline-secondary' }, "Simulation SUMO")
-]));
+const mainEl = document.querySelector('.app-main');
+mainEl.prepend(topbar("Tableau de bord de gestion & Performance", []));
 
 async function render() {
   const d = await api('/metrics');

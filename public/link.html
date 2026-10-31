@@ -1,54 +1,319 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
-<title>أرسل موقعك</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>الحماية المدنية · تحديد موقع الحادث</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-:root { color-scheme: light; }
-body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #f3f6f6; color: #10252b; font-size: 18px; line-height: 1.6; }
-main { max-width: 460px; margin: auto; padding: 20px 16px; display: grid; gap: 14px; }
-h1 { margin: 0; font-size: 24px; } p { margin: 0; }
-button, label.file { display: block; width: 100%; box-sizing: border-box; border: 0; border-radius: 8px; padding: 18px; font: inherit; font-weight: 600; text-align: center; cursor: pointer; }
-.main { background: #c41f2e; color: #fff; } .second { background: #dfe7e6; color: #10252b; }
-.note { font-size: 14px; color: #4a5f65; } .ok { background: #dff3e6; padding: 12px; border-radius: 8px; } .bad { background: #fbe6e6; padding: 12px; border-radius: 8px; }
-[hidden] { display: none !important; }
+  :root {
+    --primary: #d63031;
+    --primary-glow: rgba(214, 48, 49, 0.25);
+    --success: #00b894;
+    --success-bg: #e6f9f4;
+    --text: #2d3436;
+    --text-muted: #636e72;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .container {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 22px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    display: grid;
+    gap: 20px;
+    text-align: center;
+  }
+  .brand-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .brand-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-logo svg {
+    width: 30px;
+    height: 30px;
+  }
+  .brand-title {
+    text-align: start;
+  }
+  .brand-title h1 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a202c;
+  }
+  .brand-title span {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .instructions {
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 15px;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+  }
+  .instructions strong {
+    color: var(--primary);
+  }
+
+  .btn-location {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 18px 20px;
+    background: var(--primary);
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 4px 15px var(--primary-glow);
+    transition: all 0.2s ease;
+  }
+  .btn-location:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+  }
+  .btn-location:active {
+    transform: translateY(1px);
+  }
+  .btn-location svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+  }
+
+  .status-box {
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 600;
+    display: none;
+  }
+  .status-box.ok {
+    display: block;
+    background: var(--success-bg);
+    color: #007965;
+    border: 1px solid #a7f3d0;
+  }
+  .status-box.bad {
+    display: block;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .status-box.loading {
+    display: block;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .photo-section {
+    border-top: 1px dashed var(--border);
+    padding-top: 18px;
+    display: grid;
+    gap: 12px;
+  }
+  .btn-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    color: #475569;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-photo:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+  .btn-photo svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+
+  .privacy-note {
+    font-size: 12.5px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <h1>الحماية المدنية</h1>
-  <div id="closed" class="bad" hidden>انتهت صلاحية هذا الرابط. ابق على الخط مع الرقم 14.</div>
-  <div id="open">
-    <p>نحتاج موقعك لنصل إلى الحادث بسرعة. <b>ابق على الخط مع الرقم 14.</b></p>
-    <p style="height:12px"></p>
-    <button class="main" id="send">أرسل موقعي</button>
-    <p style="height:12px"></p>
-    <p id="status" role="status"></p>
-    <div id="photoBox" hidden>
-      <label class="file second">أضف صورة (اختياري)<input id="photo" type="file" accept="image/*" capture="environment" hidden></label>
-      <p id="photoStatus" role="status"></p>
+<div class="container">
+  <div class="brand-header">
+    <div class="brand-logo">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path fill="#e5484d" d="M21 5.5a12 12 0 1 0 0 21 9.6 9.6 0 1 1 0-21Z"/>
+        <path d="M15 16h13m-4-4 4 4-4 4" fill="none" stroke="#2bb673" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="brand-title">
+      <h1>الحماية المدنية الجزائرية</h1>
+      <span>مركز التنسيق والعمليات · ولاية الجزائر</span>
     </div>
   </div>
-  <p class="note">يُستعمل موقعك وصورتك لهذا الحادث فقط، وتُحذف الصور ورقم الهاتف بعد 30 يوماً من إغلاقه.</p>
-</main>
+
+  <div id="closed" class="status-box bad" hidden>
+    انتهت صلاحية هذا الرابط أو تم إغلاق الحادث.<br>
+    إذا كنت بحاجة للمساعدة، يرجى الاتصال فوراً بالرقم <b>14</b>.
+  </div>
+
+  <div id="open" style="display: grid; gap: 16px;">
+    <div class="instructions">
+      عون الحماية المدنية ينتظر إحداثياتك على شاشة التوجيه.<br>
+      <strong>ابقَ على الخط مع الرقم 14</strong> واضغط الزر أدناه لإرسال موقعك بدقة GPS.
+    </div>
+
+    <button class="btn-location" id="send" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <span>إرسال موقعي الآن</span>
+    </button>
+
+    <div class="status-box" id="status" role="status"></div>
+
+    <div class="photo-section" id="photoBox" hidden>
+      <label class="btn-photo">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>إلتقاط صورة لمكان الحادث (اختياري)</span>
+        <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <div class="status-box" id="photoStatus" role="status"></div>
+    </div>
+  </div>
+
+  <p class="privacy-note">
+    يُستخدم موقعك وصورتك لغرض عملية الإنقاذ هذه فقط. وتُحذف كافة الإحداثيات والبيانات تلقائياً بعد 30 يوماً من إغلاق المهمة وفقاً لمعايير حماية البيانات.
+  </p>
+</div>
+
 <script>
-const token = location.pathname.split('/').pop(), $ = id => document.getElementById(id);
-fetch('/api/link/' + token).then(r => r.json()).then(s => { if (!s.valid) { $('open').hidden = true; $('closed').hidden = false; } });
-function post(body) { return fetch('/api/link/' + token + '/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+const token = location.pathname.split('/').pop();
+const $ = id => document.getElementById(id);
+
+fetch('/api/link/' + token)
+  .then(r => r.json())
+  .then(s => {
+    if (!s.valid) {
+      $('open').hidden = true;
+      $('closed').hidden = false;
+    }
+  }).catch(() => {});
+
+function post(body) {
+  return fetch('/api/link/' + token + '/location', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
 $('send').onclick = () => {
-  if (!navigator.geolocation) { $('status').textContent = 'هاتفك لا يدعم تحديد الموقع. أعطِ مكانك للعون على الخط.'; return; }
-  $('status').textContent = 'جارٍ تحديد موقعك...';
+  if (!navigator.geolocation) {
+    $('status').className = 'status-box bad';
+    $('status').textContent = 'هاتفك لا يدعم تحديد الموقع التلقائي. صف مكان الحادث للعون مباشرة.';
+    return;
+  }
+  $('status').className = 'status-box loading';
+  $('status').textContent = 'جارٍ تحديد موقعك عبر الأقمار الاصطناعية بدقة...';
+  
   navigator.geolocation.watchPosition(async p => {
-    const r = await post({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy });
-    if (r.ok) { $('status').className = 'ok'; $('status').textContent = 'وصل موقعك إلى العون. ابق على الخط.'; $('send').hidden = true; $('photoBox').hidden = false; }
-    else { $('status').className = 'bad'; $('status').textContent = 'لم يصل موقعك. أعطِ مكانك للعون على الخط.'; }
-  }, () => { $('status').className = 'bad'; $('status').textContent = 'لم نحصل على موقعك. أعطِ مكانك للعون على الخط.'; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    try {
+      const r = await post({
+        lat: p.coords.latitude,
+        lon: p.coords.longitude,
+        accuracy: Math.round(p.coords.accuracy)
+      });
+      if (r.ok) {
+        $('status').className = 'status-box ok';
+        $('status').innerHTML = `✅ تم استلام موقعك بنجاح (دقة: ${Math.round(p.coords.accuracy)} م).<br>ابقَ على الخط مع الرقم 14، الإسعاف في طريقه.`;
+        $('send').hidden = true;
+        $('photoBox').hidden = false;
+      } else {
+        $('status').className = 'status-box bad';
+        $('status').textContent = 'لم نتمكن من إرسال الموقع. صف مكان الحادث للعون على الخط.';
+      }
+    } catch (e) {
+      $('status').className = 'status-box bad';
+      $('status').textContent = 'خطأ في الاتصال بالشبكة. صف مكان الحادث للعون على الخط.';
+    }
+  }, () => {
+    $('status').className = 'status-box bad';
+    $('status').textContent = 'تعذر الحصول على الموقع (تأكد من تفعيل خدمة الموقع GPS في هاتفك).';
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 20000
+  });
 };
+
 $('photo').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  $('photoStatus').textContent = 'جارٍ الإرسال...';
-  const r = await fetch('/api/link/' + token + '/photo', { method: 'POST', body: f });
-  $('photoStatus').textContent = r.ok ? 'وصلت الصورة.' : 'لم تصل الصورة. يكفي موقعك.';
+  const f = e.target.files[0];
+  if (!f) return;
+  $('photoStatus').className = 'status-box loading';
+  $('photoStatus').textContent = 'جارٍ إرسال الصورة إلى غرفة العمليات...';
+  try {
+    const r = await fetch('/api/link/' + token + '/photo', { method: 'POST', body: f });
+    if (r.ok) {
+      $('photoStatus').className = 'status-box ok';
+      $('photoStatus').textContent = '✅ وصلت الصورة بنجاح وتظهر الآن لفرقة التدخل.';
+    } else {
+      $('photoStatus').className = 'status-box bad';
+      $('photoStatus').textContent = 'تعذر رفع الصورة، لكن إحداثيات موقعك وصلت بالفعل.';
+    }
+  } catch (err) {
+    $('photoStatus').className = 'status-box bad';
+    $('photoStatus').textContent = 'تعذر رفع الصورة بسبب ضعف الشبكة. موقعك وصل بنجاح.';
+  }
 };
 </script>
 </body>

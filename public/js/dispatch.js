@@ -1,13 +1,14 @@
 // Civil Protection operator's screen.
-import { h, api, live, severityPill, STATUS, MISSION, topbar, minutes, clock, marker, baseMap, lightColor, lightLabel } from './common.js';
+import { h, api, live, severityPill, STATUS, MISSION, topbar, minutes, clock, marker, baseMap, lightColor, lightLabel, lightsNote } from './common.js';
 
 const L = window.L;
-const kpisEl = h('div', { class: 'kpis' }), freshEl = h('span', { class: 'fresh', role: 'status' });
-document.body.prepend(topbar("Écran de l'agent", [h('a', { href: '/metrics' }, 'Délais'), kpisEl, freshEl]));
+const kpisEl = h('div', { class: 'live-kpi-group' }), freshEl = h('span', { class: 'fresh', role: 'status', style: 'font-size:12px; color:var(--ink-3); margin-inline-start:8px;' });
+const mainEl = document.querySelector('.app-main') || document.body;
+mainEl.prepend(topbar("Régulation CAD 14", [kpisEl, freshEl]));
 const PRIORITY = { critical: 1, high: 2, medium: 3, low: 4 };
 const priorityOf = i => PRIORITY[i.severity] || 9;
 const refOf = i => `ALG-${new Date(i.created_at).toISOString().slice(0, 10).replaceAll('-', '')}-${String(i.id).padStart(4, '0')}`;
-const EVENT = { incident_created: 'Accident créé', link_sent: 'Lien envoyé au témoin', location_set: 'Lieu reçu', photo_added: 'Photo reçue', app_report: "Signalement depuis l'application", app_report_rejected: 'Signalement rejeté', merged_into: 'Accidents fusionnés', assessed: 'Gravité évaluée', dispatched: 'Unité envoyée', alert_raised: 'Hôpital alerté', hospital_changed: 'Hôpital changé', hospital_ack: 'Hôpital : alerte reçue', hospital_ready: 'Hôpital : équipe prête', hospital_availability: 'Disponibilité hôpital modifiée', closed: 'Accident clôturé', cancelled: 'Accident annulé', route_changed: 'Itinéraire changé', simulation_started: 'Trajet simulé lancé', ack_escalated: 'Hôpital relancé par SMS', crew_accept: 'Équipage : mission acceptée', crew_arrive_scene: 'Équipage : sur les lieux', crew_leave_scene: "Équipage : départ vers l'hôpital", crew_arrive_hospital: "Équipage : arrivé à l'hôpital", victims_updated: 'Nombre de victimes modifié' };
+const EVENT = { incident_created: 'Accident créé', link_sent: 'Lien envoyé au témoin', location_set: 'Lieu reçu', photo_added: 'Photo reçue', app_report: "Signalement depuis l'application", app_report_rejected: 'Signalement rejeté', merged_into: 'Accidents fusionnés', assessed: 'Gravité évaluée', dispatched: 'Unité envoyée', alert_raised: 'Hôpital alerté', hospital_changed: 'Hôpital changé', hospital_ack: 'Hôpital : alerte reçue', hospital_ready: 'Hôpital : équipe prête', hospital_availability: 'Disponibilité hôpital modifiée', closed: 'Accident clôturé', cancelled: 'Accident annulé', route_changed: 'Itinéraire changé', simulation_started: 'Trajet simulé lancé', ack_escalated: 'Hôpital relancé par SMS', light_refused: 'Feu : commande refusée', crew_accept: 'Équipage : mission acceptée', crew_arrive_scene: 'Équipage : sur les lieux', crew_leave_scene: "Équipage : départ vers l'hôpital", crew_arrive_hospital: "Équipage : arrivé à l'hôpital", victims_updated: 'Nombre de victimes modifié' };
 const map = baseMap(L, 'map');
 const layer = L.layerGroup().addTo(map);
 const listEl = document.getElementById('list'), detailEl = document.getElementById('detail'), pendingEl = document.getElementById('pending'), msgEl = document.getElementById('msg');
@@ -107,7 +108,7 @@ function missionBox(i, m) {
     h('div', { class: 'row' }, m.unit.ageS == null ? h('span', { class: 'pill warn' }, "Position de l'équipage pas encore reçue") : m.unit.ageS > state.staleAfterS ? h('span', { class: 'pill bad' }, `Dernière position il y a ${minutes(m.unit.ageS)} : contactez par radio`) : h('span', { class: 'pill ok' }, "Position de l'équipage en direct"), m.simulated && h('span', { class: 'pill warn' }, 'Trajet simulé')),
     h('div', { class: 'row' }, h('span', { class: `pill ${m.ackLate ? 'bad' : m.ackPending ? 'warn' : 'ok'}` }, `${m.hospital ? m.hospital.name : ''} : ${m.ackLate ? 'pas de confirmation, appelez' : m.ackPending ? 'en attente de confirmation' : m.readyAt ? 'prêt' : 'alerte reçue'}`),
       m.ackPending && h('button', { type: 'button', onclick: act(() => api(`/missions/${m.id}/phone-ack`, {})) }, 'Confirmé par téléphone')),
-    m.priority.length > 0 && h('span', { class: 'pill warn' }, `Feux sur le trajet : ${m.priority.length} (simulation, aucun feu réel n'est commandé)`),
+    m.priority.length > 0 && h('span', { class: 'pill warn' }, lightsNote(m.priority)),
     h('label', { class: 'muted' }, "Changer d'hôpital", h('select', { onchange: act(e => { if (e.target.value) return api(`/missions/${m.id}/hospital`, { hospitalId: +e.target.value }); }) },
       h('option', { value: '' }, 'Choisir un autre hôpital'), hospitals.filter(x => !m.hospital || x.id !== m.hospital.id).map(x => h('option', { value: x.id }, x.name)))),
     h('div', { class: 'row' },
@@ -177,13 +178,33 @@ document.getElementById('tabUnits').addEventListener('click', () => showTab('uni
 function drawKpis() {
   const busy = new Set(state.incidents.flatMap(i => i.missions.map(m => m.unit.id)));
   const waiting = state.incidents.flatMap(i => i.missions).filter(m => m.ackPending).length;
-  const kpi = (value, label, bad) => h('div', {}, h('b', { class: bad ? 'bad' : '' }, String(value)), h('span', {}, label));
   kpisEl.replaceChildren(
-    kpi(state.incidents.length, 'accidents ouverts'),
-    kpi(state.incidents.filter(i => !i.missions.length).length + state.pending.length, 'à traiter', state.incidents.some(i => !i.missions.length) || state.pending.length > 0),
-    kpi(state.units.length - busy.size, 'unités libres'),
-    kpi(state.hospitals.filter(x => x.available).length, 'hôpitaux disponibles'),
-    kpi(waiting, 'alertes sans réponse', waiting > 0));
+    h('div', { class: 'live-kpi' },
+      h('span', { class: 'live-dot bad' }),
+      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Accidents :'),
+      h('b', {}, String(state.incidents.length))
+    ),
+    h('div', { class: 'live-kpi' },
+      h('span', { class: 'live-dot warn' }),
+      h('span', { class: 'muted', style: 'font-size:12px;' }, 'À traiter :'),
+      h('b', {}, String(state.incidents.filter(i => !i.missions.length).length + state.pending.length))
+    ),
+    h('div', { class: 'live-kpi' },
+      h('span', { class: 'live-dot' }),
+      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Unités libres :'),
+      h('b', {}, String(state.units.length - busy.size))
+    ),
+    h('div', { class: 'live-kpi' },
+      h('span', { class: 'live-dot' }),
+      h('span', { class: 'muted', style: 'font-size:12px;' }, 'Hôpitaux dispo :'),
+      h('b', {}, String(state.hospitals.filter(x => x.available).length))
+    ),
+    waiting > 0 ? h('div', { class: 'live-kpi', style: 'border-color: var(--urgent); color: var(--urgent);' },
+      h('span', { class: 'live-dot bad' }),
+      h('span', { style: 'font-size:12px;' }, 'Sans réponse :'),
+      h('b', {}, String(waiting))
+    ) : null
+  );
 }
 
 function drawUnits() {

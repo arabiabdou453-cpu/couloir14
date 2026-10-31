@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test test/rules.test.js",
+    "test": "node --test test/rules.test.js test/adapters.test.js",
     "vendor": "node scripts/vendor.js",
     "smoke": "node scripts/smoke.js"
   },

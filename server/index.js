@@ -2,7 +2,7 @@
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 const { openDb, loadLights } = require('./db');
 const { createApp } = require('./app');
-const { createSms, createRouteProvider, createSimulatedController } = require('./adapters');
+const { createSms, createRouteProvider, createSignals } = require('./adapters');
 const { CONFIG } = require('./rules');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -37,7 +37,7 @@ function startServer(env = loadEnv()) {
     pending = true;
     setTimeout(() => { pending = false; for (const c of clients) c.write('data: changed\n\n'); }, 150);
   };
-  const app = createApp({ db, lights: loadLights(seedDir), sms: createSms(env), routes: createRouteProvider(env), signals: createSimulatedController(), publicUrl: () => env.PUBLIC_URL || origin, notify });
+  const app = createApp({ db, lights: loadLights(seedDir), sms: createSms(env), routes: createRouteProvider(env), signals: createSignals(env), publicUrl: () => env.PUBLIC_URL || origin, notify });
 
   // ---- sessions: a signed cookie saying who is logged in
   const sign = v => crypto.createHmac('sha256', env.SESSION_SECRET).update(v).digest('base64url');

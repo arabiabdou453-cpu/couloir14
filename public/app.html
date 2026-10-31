@@ -1,40 +1,275 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#c41f2e">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#c41f2e">
 <link rel="manifest" href="/app.webmanifest">
-<title>بلاغ حادث</title>
+<link rel="icon" href="/icon.svg">
+<title>بلاغ طارئ · الحماية المدنية 14</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #f3f6f6; color: #10252b; font-size: 18px; line-height: 1.6; }
-main { max-width: 460px; margin: auto; padding: 24px 16px; display: grid; gap: 16px; text-align: center; }
-h1 { margin: 0; font-size: 24px; } p { margin: 0; }
-a.call { display: block; background: #c41f2e; color: #fff; border-radius: 50%; width: 220px; height: 220px; line-height: 220px; margin: 12px auto; font-size: 30px; font-weight: 700; text-decoration: none; }
-input { font: inherit; padding: 12px; width: 100%; box-sizing: border-box; border: 1px solid #b3c1bf; border-radius: 8px; direction: ltr; text-align: center; }
-.note { font-size: 14px; color: #4a5f65; }
+  :root {
+    --primary: #c41f2e;
+    --primary-glow: rgba(196, 31, 46, 0.4);
+    --bg: #09131d;
+    --card: #0f2130;
+    --border: #1a3348;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at 50% 20%, #152c42 0%, var(--bg) 80%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    line-height: 1.6;
+  }
+  .app-card {
+    width: 100%;
+    max-width: 440px;
+    background: rgba(15, 33, 48, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    display: grid;
+    gap: 20px;
+  }
+  .app-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(229, 72, 77, 0.12);
+    border: 1px solid rgba(229, 72, 77, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-logo svg {
+    width: 32px;
+    height: 32px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+  }
+  p.subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .call-container {
+    padding: 10px 0;
+    display: flex;
+    justify-content: center;
+  }
+  .btn-call {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e5484d 0%, #b31d27 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    box-shadow: 0 0 0 10px rgba(229, 72, 77, 0.15), 0 0 30px var(--primary-glow);
+    transition: all 0.25s ease;
+    animation: pulse-ring 2.5s infinite;
+  }
+  .btn-call:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 16px rgba(229, 72, 77, 0.2), 0 0 45px var(--primary-glow);
+  }
+  .btn-call .number {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    font-family: 'Tajawal', sans-serif;
+  }
+  .btn-call .label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    opacity: 0.9;
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.4), 0 0 25px var(--primary-glow); }
+    70% { box-shadow: 0 0 0 22px rgba(229, 72, 77, 0), 0 0 35px var(--primary-glow); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0), 0 0 25px var(--primary-glow); }
+  }
+
+  .phone-input-group {
+    text-align: start;
+    display: grid;
+    gap: 6px;
+  }
+  .phone-input-group label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .phone-input-group input {
+    background: #071018;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    font-size: 16px;
+    direction: ltr;
+    text-align: center;
+    width: 100%;
+    outline: none;
+    font-family: 'IBM Plex Mono', Consolas, monospace;
+    transition: border-color .2s;
+  }
+  .phone-input-group input:focus {
+    border-color: #2ed573;
+  }
+
+  .status-pill {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    display: none;
+  }
+  .status-pill.ok {
+    display: block;
+    background: rgba(46, 213, 115, 0.15);
+    color: #7bed9f;
+    border: 1px solid rgba(46, 213, 115, 0.3);
+  }
+  .status-pill.bad {
+    display: block;
+    background: rgba(255, 71, 87, 0.15);
+    color: #ff8b94;
+    border: 1px solid rgba(255, 71, 87, 0.3);
+  }
+  .status-pill.loading {
+    display: block;
+    background: rgba(30, 144, 255, 0.15);
+    color: #70a1ff;
+    border: 1px solid rgba(30, 144, 255, 0.3);
+  }
+
+  .app-note {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>بلاغ حادث مرور</h1>
-  <p>اضغط الزر: يتصل هاتفك بالرقم 14، ويُرسل موقعك إلى العون.</p>
-  <a class="call" id="call" href="tel:14">اتصل بـ 14</a>
-  <p id="status" role="status"></p>
-  <label>رقم هاتفك (اختياري، ليربطه العون بمكالمتك)<input id="phone" inputmode="tel" placeholder="0555 12 34 56"></label>
-  <p class="note">هذا التطبيق لا يرسل إسعافاً وحده: العون يتأكد من البلاغ أولاً. البلاغ الكاذب يعطل إنقاذ غيرك. إذا لم تكن هناك شبكة، فلن تصل المكالمة ولا الموقع.</p>
-</main>
+<div class="app-card">
+  <div class="app-header">
+    <div class="brand-logo">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path fill="#e5484d" d="M21 5.5a12 12 0 1 0 0 21 9.6 9.6 0 1 1 0-21Z"/>
+        <path d="M15 16h13m-4-4 4 4-4 4" fill="none" stroke="#2bb673" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>بلاغ طارئ عن حادث مرور</h1>
+    <p class="subtitle">الحماية المدنية الجزائرية · ولاية الجزائر</p>
+  </div>
+
+  <div class="call-container">
+    <a class="btn-call" id="call" href="tel:14" aria-label="اتصل بالرقم 14">
+      <span class="number">14</span>
+      <span class="label">اتصال فوري</span>
+    </a>
+  </div>
+
+  <p style="font-size: 14.5px; color: #cbd5e1;">
+    اضغط الزر للاتصال بالرقم 14 وإرسال موقعك الجغرافي مباشرة إلى قاعة العمليات.
+  </p>
+
+  <div class="phone-input-group">
+    <label for="phone">رقم هاتفك (اختياري لربط البلاغ بمكالمتك):</label>
+    <input id="phone" type="tel" inputmode="tel" placeholder="0555 12 34 56">
+  </div>
+
+  <div class="status-pill" id="status" role="status"></div>
+
+  <p class="app-note">
+    تنبيه: هذا التطبيق يسهل الربط المباشر مع عون الحماية المدنية. لا يتم إرسال أي إسعاف إلا بعد تأكيد المكالمة من طرف العون. البلاغ الكاذب يعرض صاحبه للمساءلة القانونية ويعطل إنقاذ الأرواح.
+  </p>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
-try { $('phone').value = localStorage.getItem('phone') || ''; } catch (e) {}
+
+try {
+  $('phone').value = localStorage.getItem('couloir14_phone') || '';
+} catch (e) {}
+
 $('call').addEventListener('click', () => {
-  try { localStorage.setItem('phone', $('phone').value); } catch (e) {}
+  try {
+    localStorage.setItem('couloir14_phone', $('phone').value);
+  } catch (e) {}
+
   if (!navigator.geolocation) return;
-  $('status').textContent = 'جارٍ إرسال موقعك...';
+
+  $('status').className = 'status-pill loading';
+  $('status').textContent = 'جارٍ إرسال موقعك إلى عون الحماية المدنية...';
+
   navigator.geolocation.getCurrentPosition(async p => {
-    const r = await fetch('/api/app/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, phone: $('phone').value || null }) });
-    $('status').textContent = r.ok ? 'وصل موقعك إلى العون.' : 'لم يصل موقعك. أعطِ مكانك للعون على الخط.';
-  }, () => { $('status').textContent = 'لم نحصل على موقعك. أعطِ مكانك للعون على الخط.'; }, { enableHighAccuracy: true, timeout: 15000 });
+    try {
+      const r = await fetch('/api/app/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat: p.coords.latitude,
+          lon: p.coords.longitude,
+          accuracy: Math.round(p.coords.accuracy),
+          phone: $('phone').value.trim() || null
+        })
+      });
+      if (r.ok) {
+        $('status').className = 'status-pill ok';
+        $('status').textContent = '✅ وصل موقعك بنجاح. ابقَ على الخط مع الرقم 14.';
+      } else {
+        $('status').className = 'status-pill bad';
+        $('status').textContent = 'تعذر إرسال الموقع. صِف مكان الحادث للعون مباشرة.';
+      }
+    } catch (e) {
+      $('status').className = 'status-pill bad';
+      $('status').textContent = 'تعذر إرسال الموقع عبر الإنترنت. صِف المكان للعون على الخط.';
+    }
+  }, () => {
+    $('status').className = 'status-pill bad';
+    $('status').textContent = 'تعذر تحديد موقع GPS. صِف مكان الحادث للعون مباشرة.';
+  }, {
+    enableHighAccuracy: true,
+    timeout: 15000
+  });
 });
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>

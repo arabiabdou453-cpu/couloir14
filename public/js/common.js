@@ -92,4 +92,5 @@ export function baseMap(L, el, center = [36.755, 3.06], zoom = 13) {
 }
 
 export const lightColor = status => (status === 'active' ? '#2bb673' : '#f0a52b');
-export const lightLabel = p => `${p.status === 'active' ? "Ouvert pour l'ambulance" : 'En transition : jaune puis rouge intégral'} (simulation)${p.source === 'hypothetical' ? ', feu hypothétique' : ''}`;
+export const lightLabel = p => `${p.status === 'active' ? "Ouvert pour l'ambulance" : 'En transition : jaune puis rouge intégral'} (${p.live ? 'contrôleur réel' : 'simulation'})${p.source === 'hypothetical' ? ', feu hypothétique' : ''}`;
+export const lightsNote = list => `Feux sur le trajet : ${list.length} (${list.some(p => p.live) ? 'contrôleur réel' : "simulation, aucun feu réel n'est commandé"})`;

@@ -303,18 +303,29 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
     const pos = unitPosition(unit(m.unit_id));
     if (!moving || !pos.updated_at || now() - pos.updated_at > CONFIG.priorityExpiryMs) { if (open.length) await releaseAll(m.id); return; }
     const ahead = new Map(R.lightsAhead(JSON.parse(m.route_json), pos, lights).map(a => [a.light.id, a]));
+    const held = new Set();
     for (const p of open) {
+      // A real controller lets a command expire by itself, so each one is renewed, and a refusal ends it here too.
+      const renewed = ahead.has(p.light_id) && signals.live ? await signals.request(lightById.get(p.light_id), m.id) : null;
       if (!ahead.has(p.light_id)) {
         await signals.release(lightById.get(p.light_id), m.id);
+        q("UPDATE priority_requests SET status = 'released', released_at = ? WHERE id = ?").run(now(), p.id);
+        held.add(p.light_id);
+        continue;
+      }
+      held.add(p.light_id);
+      if (renewed && !renewed.accepted) {
+        log(m.incident_id, 'system', 'light_refused', renewed.reason);
         q("UPDATE priority_requests SET status = 'released', released_at = ? WHERE id = ?").run(now(), p.id);
       } else if (p.status === 'requested' && now() - p.requested_at >= CONFIG.yellowAndAllRedMs) {
         q("UPDATE priority_requests SET status = 'active', active_at = ? WHERE id = ?").run(now(), p.id);
       }
     }
-    const held = new Set(open.map(p => p.light_id));
     for (const [id, a] of ahead) {
       if (held.has(id)) continue;
-      await signals.request(a.light, m.id);
+      // Never show a light as opening unless its controller accepted. It is asked again on the next pass.
+      const asked = await signals.request(a.light, m.id);
+      if (asked && asked.accepted === false) continue;
       q("INSERT INTO priority_requests (mission_id, light_id, status, requested_at) VALUES (?, ?, 'requested', ?)").run(m.id, id, now());
     }
   }
@@ -394,7 +405,7 @@ function createApp({ db, lights, sms, routes, signals, publicUrl, now = () => Da
       route, routeSource: m.route_source, routeChanges: m.route_changes, etaLeftS: etaLeft == null ? null : Math.round(etaLeft),
       ackPending: m.ack_version < m.alert_version, ackAt: m.ack_at, ackBy: m.ack_by, readyAt: m.ready_at,
       ackLate: m.ack_version < m.alert_version && !!m.alert_at && now() - m.alert_at >= CONFIG.ackTimeoutMs,
-      priority: requests.map(r => { const l = lightById.get(r.light_id); return { status: r.status, lat: l.lat, lon: l.lon, names: l.names, source: l.source }; }),
+      priority: requests.map(r => { const l = lightById.get(r.light_id); return { status: r.status, lat: l.lat, lon: l.lon, names: l.names, source: l.source, live: Boolean(signals.live) }; }),
     };
   }
 

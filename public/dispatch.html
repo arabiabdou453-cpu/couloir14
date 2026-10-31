@@ -1,37 +1,90 @@
 <!doctype html>
 <html lang="fr" dir="ltr" data-bs-theme="dark">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Écran de l'agent</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="/vendor/leaflet.css"><link rel="stylesheet" href="/vendor/tabler.min.css"><link rel="stylesheet" href="/css/app.css">
-<script src="/vendor/leaflet.js"></script><script src="/vendor/qrcode.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Couloir 14 · Régulation CAD 14</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="/vendor/tabler.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/leaflet.js"></script>
+<script src="/vendor/qrcode.js"></script>
 </head>
 <body>
-<div class="dispatch">
-  <aside class="side">
-    <form class="block" id="newForm">
-      <h2>Nouvel appel au 14</h2>
-      <div class="row"><input class="grow form-control" id="phone" inputmode="tel" dir="ltr" placeholder="0555 12 34 56" aria-label="Numéro de l'appelant"><button class="btn btn-danger" type="submit">Nouvel accident</button></div>
-      <p class="muted" id="smsNote" hidden>Envoi de SMS non activé : le lien et le QR code s'affichent à l'écran.</p>
-      <p class="error" id="msg" role="alert"></p>
-    </form>
-    <div id="pending"></div>
-    <h3 class="col-title">Accidents ouverts</h3>
-    <div id="list"></div>
-  </aside>
-  <div class="center">
-    <div id="map" aria-label="Carte des accidents et des unités"></div>
-    <section class="feed" aria-label="Journal des événements"><h3 class="col-title">Journal</h3><ol id="feed"></ol></section>
-  </div>
-  <aside class="side right">
-    <div class="tabs" role="group" aria-label="Panneau">
-      <button type="button" id="tabIncident" aria-pressed="true">Accident</button>
-      <button type="button" id="tabUnits" aria-pressed="false">Unités</button>
+<div class="app-shell">
+  <!-- Left Navigation Rail (Like Vessa Dashboard) -->
+  <aside class="app-rail">
+    <a class="rail-brand" href="/" title="Couloir 14">
+      <svg viewBox="0 0 32 32" style="width:24px;height:24px;" aria-hidden="true">
+        <path fill="#e5484d" d="M21 5.5a12 12 0 1 0 0 21 9.6 9.6 0 1 1 0-21Z"/>
+        <path d="M15 16h13m-4-4 4 4-4 4" fill="none" stroke="#2bb673" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <nav class="rail-nav">
+      <a class="rail-item active" href="/dispatch" title="Régulation CAD 14">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </a>
+      <a class="rail-item" href="/unit" title="Équipage Ambulance">
+        <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      </a>
+      <a class="rail-item" href="/er" title="Urgences Hôpital">
+        <svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M12 6v6"/></svg>
+      </a>
+      <a class="rail-item" href="/metrics" title="Délais & Performance">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 16l4-4 4 4 5-6"/></svg>
+      </a>
+      <a class="rail-item" href="/twin" title="Jumeau SUMO">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
+      </a>
+    </nav>
+    <div class="rail-foot">
+      <a class="rail-item" href="/" title="Présentation publique" target="_blank">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </a>
     </div>
-    <div id="detail"></div>
-    <div id="units" hidden></div>
   </aside>
+
+  <!-- Main View Area -->
+  <div class="app-main">
+    <div class="dispatch">
+      <aside class="side">
+        <form class="intake-card" id="newForm">
+          <h2>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--urgent)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            Nouvel appel au 14
+          </h2>
+          <div class="phone-input-row">
+            <input class="form-control" id="phone" inputmode="tel" dir="ltr" placeholder="0555 12 34 56" aria-label="Numéro de l'appelant" />
+            <button class="btn btn-danger" type="submit" style="white-space: nowrap;">Alerte 14</button>
+          </div>
+          <p class="muted" id="smsNote" hidden style="font-size: 11.5px;">SMS non activé : le lien et le QR code s'affichent à l'écran.</p>
+          <p class="error" id="msg" role="alert"></p>
+        </form>
+        <div id="pending"></div>
+        <h3 class="col-title">Accidents ouverts</h3>
+        <div id="list"></div>
+      </aside>
+
+      <div class="center">
+        <div id="map" aria-label="Carte tactique des secours et des feux"></div>
+        <section class="feed" aria-label="Journal des événements">
+          <h3 class="col-title" style="background:#071018; margin:0;">Journal tactique des opérations</h3>
+          <ol id="feed"></ol>
+        </section>
+      </div>
+
+      <aside class="side right">
+        <div class="tabs" role="group" aria-label="Panneau">
+          <button type="button" id="tabIncident" aria-pressed="true">Dossier d'intervention</button>
+          <button type="button" id="tabUnits" aria-pressed="false">Flotte d'unités</button>
+        </div>
+        <div id="detail"></div>
+        <div id="units" hidden></div>
+      </aside>
+    </div>
+  </div>
 </div>
 <script type="module" src="/js/dispatch.js"></script>
 </body>

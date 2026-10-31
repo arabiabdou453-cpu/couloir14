@@ -1,5 +1,6 @@
 // Connections to the outside world. Each one can be replaced without touching the rest of the server.
-const { distanceM } = require('./rules');
+const crypto = require('node:crypto');
+const { distanceM, CONFIG } = require('./rules');
 
 // SMS through SMS Gateway for Android. Without credentials, the operator's screen shows the link and a QR code.
 function createSms(env) {
@@ -66,13 +67,46 @@ function createRouteProvider(env) {
   };
 }
 
-// Traffic lights. Nothing here reaches a real light: a real controller will implement the same two calls.
+// Traffic lights. The default reaches no light at all.
 function createSimulatedController() {
   return {
     name: 'simulated',
+    live: false,
     async request() { return { accepted: true }; },
     async release() { return { accepted: true }; },
   };
 }
 
-module.exports = { createSms, createRouteProvider, createSimulatedController };
+// A real controller over HTTP, used only when SIGNAL_URL is set. Every command is signed and short-lived,
+// and only the lights listed in SIGNAL_LIGHT_IDS are ever asked. See docs/signal-controller.md.
+function createHttpController(env) {
+  const url = new URL(env.SIGNAL_URL);
+  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) throw new Error('SIGNAL_URL must use https');
+  if (!env.SIGNAL_SECRET) throw new Error('SIGNAL_URL needs SIGNAL_SECRET');
+  const equipped = new Set(String(env.SIGNAL_LIGHT_IDS || '').split(',').map(s => s.trim()).filter(Boolean));
+  const send = async (action, light, missionId) => {
+    if (!light || !equipped.has(String(light.id))) return { accepted: false, reason: 'not_equipped' };
+    const body = JSON.stringify({ action, lightId: light.id, missionId, ttlS: CONFIG.priorityExpiryMs / 1000, at: Date.now() });
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Signature': crypto.createHmac('sha256', env.SIGNAL_SECRET).update(body).digest('hex') },
+        body, signal: AbortSignal.timeout(3000),
+      });
+      const reply = await res.json().catch(() => ({}));
+      return res.ok && reply.accepted === true ? { accepted: true } : { accepted: false, reason: `refused_${res.status}` };
+    } catch (e) {
+      return { accepted: false, reason: 'unreachable' };
+    }
+  };
+  return {
+    name: 'http',
+    live: true,
+    request: (light, missionId) => send('request', light, missionId),
+    release: (light, missionId) => send('release', light, missionId),
+  };
+}
+
+const createSignals = env => (env.SIGNAL_URL ? createHttpController(env) : createSimulatedController());
+
+module.exports = { createSms, createRouteProvider, createSimulatedController, createHttpController, createSignals };
